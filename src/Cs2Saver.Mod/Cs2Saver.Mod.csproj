@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.1 to match the game's Mono runtime (Mono 6.13, .NET Standard 2.1). -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Cs2Saver</AssemblyName>
+    <RootNamespace>Cs2Saver</RootNamespace>
+    <EnableDefaultItems>true</EnableDefaultItems>
+
+    <!-- The game ships its own System.* facades, which differ in version from the
+         netstandard2.1 reference pack. The game resolves these at runtime through Mono, so
+         the assembly-unification noise at build time is expected and not actionable. -->
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+
+    <!-- Game assemblies are referenced from the player's own install and are never
+         copied or redistributed. Override on the command line if Steam is elsewhere:
+           dotnet build -p:GameManagedDir="D:\...\Cities2_Data\Managed" -->
+    <GameManagedDir Condition="'$(GameManagedDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed</GameManagedDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Game;
+                        Colossal.Core;
+                        Colossal.Logging;
+                        Colossal.Mathematics;
+                        Colossal.IO.AssetDatabase;
+                        Unity.Entities;
+                        Unity.Entities.Hybrid;
+                        Unity.Collections;
+                        Unity.Mathematics;
+                        Unity.Burst;
+                        UnityEngine.CoreModule">
+      <HintPath>$(GameManagedDir)\%(Identity).dll</HintPath>
+      <!-- Never ship the game's own assemblies alongside the mod. -->
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="WarnIfGameMissing" BeforeTargets="ResolveReferences">
+    <Warning Condition="!Exists('$(GameManagedDir)\Game.dll')"
+             Text="Game.dll not found under '$(GameManagedDir)'. Set -p:GameManagedDir=... to your Cities2_Data\Managed folder." />
+  </Target>
+
+</Project>
