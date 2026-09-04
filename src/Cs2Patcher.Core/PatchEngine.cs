@@ -176,6 +176,21 @@ public sealed class PatchEngine(string settingsFilePath, string backupDirectory)
         File.Delete(OriginalPath);
         if (File.Exists(ManifestPath)) File.Delete(ManifestPath);
 
+        // Leave no trace: drop the backup folder too, but only if it is genuinely empty,
+        // so we never delete something a user put there.
+        try
+        {
+            if (Directory.Exists(backupDirectory) &&
+                !Directory.EnumerateFileSystemEntries(backupDirectory).Any())
+            {
+                Directory.Delete(backupDirectory);
+            }
+        }
+        catch
+        {
+            // An undeleted empty folder is not worth failing a successful revert over.
+        }
+
         return new PatchResult(true, "Reverted to the original Settings.coc.", [], []);
     }
 
