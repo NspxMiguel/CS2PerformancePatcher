@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cs2Patcher.Core", "src\Cs2P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cs2Patcher.Cli", "src\Cs2Patcher.Cli\Cs2Patcher.Cli.csproj", "{A8554F56-E9C3-4AF3-91C5-101B52A0A864}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cs2Patcher.Gui", "src\Cs2Patcher.Gui\Cs2Patcher.Gui.csproj", "{6A2F0103-7D37-4FC3-9BD1-CA51BE9786BA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,9 +28,14 @@ Global
 		{A8554F56-E9C3-4AF3-91C5-101B52A0A864}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A8554F56-E9C3-4AF3-91C5-101B52A0A864}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A8554F56-E9C3-4AF3-91C5-101B52A0A864}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A2F0103-7D37-4FC3-9BD1-CA51BE9786BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A2F0103-7D37-4FC3-9BD1-CA51BE9786BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A2F0103-7D37-4FC3-9BD1-CA51BE9786BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A2F0103-7D37-4FC3-9BD1-CA51BE9786BA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A3CF3033-81B4-4BFD-A568-81222B440EE3} = {1C1D3FED-D6C9-4714-A8B0-9A618F7EE350}
 		{A8554F56-E9C3-4AF3-91C5-101B52A0A864} = {1C1D3FED-D6C9-4714-A8B0-9A618F7EE350}
+		{6A2F0103-7D37-4FC3-9BD1-CA51BE9786BA} = {1C1D3FED-D6C9-4714-A8B0-9A618F7EE350}
 	EndGlobalSection
 EndGlobal
