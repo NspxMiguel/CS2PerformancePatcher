@@ -65,6 +65,43 @@ and re-upload meshes it is about to need again. VRAM is read from the game's own
 reports the true figure — Windows' `Win32_VideoController.AdapterRAM` is a 32-bit field that
 saturates at 4096 MB and will tell you an 8 GB card has 4 GB.
 
+## The code mod (experimental)
+
+Settings can only move global dials. "Keep the city sharp but stop drawing pedestrians at
+distance" needs per-entity control, which is what `Cs2Saver` does.
+
+```
+cs2patch install-mod      # copy it into the game's local mods folder
+cs2patch uninstall-mod
+```
+
+Then enable it in the game's mod list and open its options page. It ships **off**; nothing
+changes until you pick a preset.
+
+**How it works.** Every visibility test in the game reduces to
+`CalculateMaxLod(bounds, camera) >= CullingInfo.m_MinLod`, where `m_MinLod` is a per-entity byte.
+The LOD value falls with distance, so raising the floor culls sooner — and because
+`CalculateDistanceFactor(lod) = pow(2, (128 - lod) / 6)`, **every +6 halves render distance**.
+The mod raises that floor on pedestrians and vehicles only. Buildings, roads and terrain are
+never touched, so the city looks identical.
+
+The write only ever *raises* the floor, never sets an absolute value or accumulates an offset,
+which makes running it every frame idempotent and lets the game rebuild culling data whenever it
+likes without the mod fighting it.
+
+**It also records frame timings.** Turn on "Record frame timings" and it writes a CSV every ten
+seconds: average FPS plus the 1% and 0.1% lows. The lows are the point — an average can improve
+while the game feels worse, and only the percentiles show that. Use it to check whether a preset
+actually helped on *your* machine rather than trusting anybody's numbers, including this
+repository's.
+
+**Two honest caveats.** It is not runtime tested — it compiles against the real `Game.dll` of
+1.6.0f1, which validates every API it touches, but no frame has been rendered with it loaded.
+And because it is built with plain `dotnet build` rather than the official Mod Post Processor,
+there is no Burst-compiled native companion, so its job runs as managed code. For a loop that
+takes a `max` over one byte per entity that is unlikely to matter, but it is a real difference
+from what the official toolchain produces.
+
 ## Safety
 
 - The original `Settings.coc` is copied to `CS2PerformancePatcher_Backup\` before anything is written.

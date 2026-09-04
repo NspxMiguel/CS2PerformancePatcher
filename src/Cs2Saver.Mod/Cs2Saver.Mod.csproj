@@ -25,6 +25,7 @@
                         Colossal.Core;
                         Colossal.Logging;
                         Colossal.Mathematics;
+                        Colossal.Localization;
                         Colossal.IO.AssetDatabase;
                         Unity.Entities;
                         Unity.Entities.Hybrid;

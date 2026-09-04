@@ -1,4 +1,5 @@
 ﻿using System;
+using Colossal.IO.AssetDatabase;
 using Colossal.Logging;
 using Game;
 using Game.Modding;
@@ -20,6 +21,7 @@ namespace Cs2Saver
 
         internal static RenderBudgetSystem BudgetSystem;
         internal static FrameLogSystem FrameLog;
+        internal static Settings Setting;
 
         public void OnLoad(UpdateSystem updateSystem)
         {
@@ -45,6 +47,20 @@ namespace Cs2Saver
                 updateSystem.UpdateAt<FrameLogSystem>(SystemUpdatePhase.LateUpdate);
                 FrameLog = updateSystem.World.GetOrCreateSystemManaged<FrameLogSystem>();
                 FrameLog.Recording = false;
+            });
+
+            // Registered last, so the systems it drives already exist when it applies itself.
+            TryRegister("settings", () =>
+            {
+                Setting = new Settings(this);
+                Setting.RegisterInOptionsUI();
+
+                GameManager.instance.localizationManager.AddSource("en-US", new LocaleEN(Setting));
+                AssetDatabase.global.LoadSettings(nameof(Cs2Saver), Setting, new Settings(this));
+
+                // Push whatever was loaded from disk into the live systems, so a returning
+                // player gets the preset they chose last time rather than an inert mod.
+                Setting.ApplyToSystems();
             });
         }
 

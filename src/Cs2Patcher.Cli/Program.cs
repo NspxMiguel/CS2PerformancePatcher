@@ -24,6 +24,8 @@ try
         case "list": return List();
         case "apply": return Apply();
         case "revert": return Revert();
+        case "install-mod": return InstallMod();
+        case "uninstall-mod": return UninstallMod();
         case "help" or "--help" or "-h": return Help();
         default:
             Fail($"Unknown command '{command}'.");
@@ -152,6 +154,51 @@ int Revert()
     return result.Success ? 0 : 1;
 }
 
+int InstallMod()
+{
+    if (IsGameRunning())
+    {
+        Fail("Cities: Skylines II is running. Close it first.");
+        return 1;
+    }
+
+    var dll = GetOption(args, "--dll") ?? DefaultModPath();
+    var result = ModInstaller.Install(install.UserDataDir!, dll);
+
+    Console.WriteLine(result.Success ? $"OK — {result.Message}" : $"FAILED — {result.Message}");
+    if (result.Success)
+    {
+        Console.WriteLine($"  {result.InstalledPath}");
+        Console.WriteLine();
+        Warn("The mod is UNTESTED at runtime. It starts inert and changes nothing until configured.");
+    }
+    return result.Success ? 0 : 1;
+}
+
+int UninstallMod()
+{
+    if (IsGameRunning())
+    {
+        Fail("Cities: Skylines II is running. Close it first.");
+        return 1;
+    }
+
+    var result = ModInstaller.Uninstall(install.UserDataDir!);
+    Console.WriteLine(result.Success ? $"OK — {result.Message}" : $"FAILED — {result.Message}");
+    return result.Success ? 0 : 1;
+}
+
+// Built next to this executable when the whole solution is published together; otherwise
+// falls back to the source-tree build output so it works from a dev checkout.
+static string DefaultModPath()
+{
+    var beside = Path.Combine(AppContext.BaseDirectory, "Cs2Saver.dll");
+    if (File.Exists(beside)) return beside;
+
+    return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
+        "..", "..", "..", "..", "Cs2Saver.Mod", "bin", "Release", "netstandard2.1", "Cs2Saver.dll"));
+}
+
 int Help()
 {
     Console.WriteLine("Usage");
@@ -160,8 +207,13 @@ int Help()
     Console.WriteLine("  cs2patch apply <profile>     Apply a profile (default: traffic)");
     Console.WriteLine("  cs2patch revert              Restore the original settings");
     Console.WriteLine();
+    Console.WriteLine("Experimental — the code mod, which is not runtime tested");
+    Console.WriteLine("  cs2patch install-mod         Install the Cs2Saver mod into the local mods folder");
+    Console.WriteLine("  cs2patch uninstall-mod       Remove it again");
+    Console.WriteLine();
     Console.WriteLine("Options");
     Console.WriteLine("  --path <dir>                 Point at the game install explicitly");
+    Console.WriteLine("  --dll <file>                 Use a specific Cs2Saver.dll build");
     return 0;
 }
 
