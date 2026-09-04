@@ -140,6 +140,63 @@ culling and LOD selection), `BatchDataSystem` (116 KB), and the citizen skinning
 (`AnimatedSystem`, `ProceduralSkeletonSystem`, `InitializeBonesSystem`). `CullingInfo` carries a
 per-entity `m_MinLod` and `m_PassedCulling`, which is the natural place for per-entity budgeting.
 
+## The shape of the codebase
+
+A full type inventory across `Game.dll` and the `Colossal.*` assemblies (generated with
+`ilspycmd -l`, kept out of the repo under `.research/typemap/`):
+
+**11,113 types**, of which `Game.dll` alone holds 8,904. Among them are **906 ECS systems**:
+
+| Namespace | Systems | Why it matters |
+|---|---:|---|
+| `Game.Simulation` | 315 | Where CPU cost concentrates as a city grows |
+| `Game.UI` | 123 | |
+| `Game.Serialization` | 74 | |
+| `Game.Rendering` | 63 | The GPU-side surface this project targets |
+| `Game.Tools` | 55 | |
+| `Game.Prefabs` | 36 | Mesh and geometry setup |
+
+Water is spread across roughly twenty systems (`WaterSystem`, `SoilWaterSystem`,
+`GroundWaterSystem`, `WaterPipeFlowSystem` and friends) — consistent with Iceflake publicly
+naming water simulation as an area they are still optimising.
+
+## System update intervals: a lever, with a trap
+
+Every system can declare how often it runs:
+
+```csharp
+public virtual int GetUpdateInterval(SystemUpdatePhase phase) => 1;
+public virtual int GetUpdateOffset(SystemUpdatePhase phase)   => -1;
+```
+
+254 overrides across 198 files, overwhelmingly in `Game.Simulation`. Both methods are plain
+managed virtuals, so they are reachable by Harmony where the jobs they schedule are not.
+
+**The trap**, in `UpdateSystem`:
+
+```csharp
+if (!math.ispow2(interval))
+    throw new Exception("System update interval not power of 2");
+```
+
+An interval that is not a power of two throws. Anything scaling these values must round to a
+power of two or it will crash the game rather than slow it down.
+
+This is recorded as a finding, not implemented. Changing how often a simulation system runs
+changes the simulation, and the design rule for this project is that visual waste is fair game
+while the simulation is not. If it is ever used, it should be restricted to systems that are
+demonstrably cosmetic.
+
+## Measurement
+
+`FrameLogSystem` in the mod writes a CSV to `Cs2Saver/frames-*.csv` under the game's persistent
+data folder: frames, average FPS, p50/p95/p99 frame time, and 1% / 0.1% low FPS, in ten-second
+windows, tagged with a free-text label.
+
+The lows are recorded as first-class columns on purpose. An average can improve while the
+experience gets worse — a build that gains five average FPS but loses twelve off its 1% low
+feels worse to play, and only the percentiles show that.
+
 ## The honest caveat
 
 Every frame-time figure quoted here comes from published analysis of the launch build. Nothing in
