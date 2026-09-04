@@ -3,6 +3,8 @@ using Colossal.IO.AssetDatabase;
 using Colossal.Logging;
 using Game;
 using Game.Modding;
+using Game.Prefabs;
+using Game.Rendering;
 using Game.SceneFlow;
 
 namespace Cs2Saver
@@ -32,9 +34,12 @@ namespace Cs2Saver
             // frame log in particular has to survive so a broken budget can still be measured.
             TryRegister("render budget", () =>
             {
-                // PreCulling runs immediately before PreCullingSystem decides visibility, so a
-                // floor written here applies on the same frame rather than one frame late.
-                updateSystem.UpdateAt<RenderBudgetSystem>(SystemUpdatePhase.PreCulling);
+                // Explicitly BEFORE PreCullingSystem, not merely in the same phase. Mods register
+                // after the game's own SystemOrder, so a plain UpdateAt would land after
+                // PreCullingSystem and the floor would only take effect a frame later -- and for
+                // entities the game re-seeds every frame, never at all.
+                updateSystem.UpdateBefore<RenderBudgetSystem, PreCullingSystem>(
+                    SystemUpdatePhase.PreCulling);
                 BudgetSystem = updateSystem.World.GetOrCreateSystemManaged<RenderBudgetSystem>();
 
                 // Starts inert. Nothing changes until something sets a budget, so a broken
@@ -44,9 +49,11 @@ namespace Cs2Saver
 
             TryRegister("prefab LOD floor", () =>
             {
-                // PrefabUpdate: where prefab entities are set up, so the floor is in place
-                // before anything is spawned from them.
-                updateSystem.UpdateAt<PrefabLodFloorSystem>(SystemUpdatePhase.PrefabUpdate);
+                // Explicitly AFTER ObjectInitializeSystem, which is what computes
+                // ObjectGeometryData.m_MinLod in the first place. Running before it would have
+                // the floor immediately overwritten by the value we mean to raise.
+                updateSystem.UpdateAfter<PrefabLodFloorSystem, ObjectInitializeSystem>(
+                    SystemUpdatePhase.PrefabUpdate);
                 PrefabFloor = updateSystem.World.GetOrCreateSystemManaged<PrefabLodFloorSystem>();
                 PrefabFloor.Floor = 0;
             });
