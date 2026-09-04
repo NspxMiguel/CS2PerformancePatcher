@@ -20,6 +20,7 @@ namespace Cs2Saver
             LogManager.GetLogger(nameof(Cs2Saver)).SetShowsErrorsInUI(false);
 
         internal static RenderBudgetSystem BudgetSystem;
+        internal static PrefabLodFloorSystem PrefabFloor;
         internal static FrameLogSystem FrameLog;
         internal static Settings Setting;
 
@@ -39,6 +40,15 @@ namespace Cs2Saver
                 // Starts inert. Nothing changes until something sets a budget, so a broken
                 // build degrades to "does nothing" rather than "ruins the view".
                 BudgetSystem.Budget = RenderBudget.Off;
+            });
+
+            TryRegister("prefab LOD floor", () =>
+            {
+                // PrefabUpdate: where prefab entities are set up, so the floor is in place
+                // before anything is spawned from them.
+                updateSystem.UpdateAt<PrefabLodFloorSystem>(SystemUpdatePhase.PrefabUpdate);
+                PrefabFloor = updateSystem.World.GetOrCreateSystemManaged<PrefabLodFloorSystem>();
+                PrefabFloor.Floor = 0;
             });
 
             TryRegister("frame log", () =>

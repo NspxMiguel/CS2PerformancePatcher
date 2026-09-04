@@ -58,16 +58,19 @@ namespace Cs2Saver
         /// <summary>Pushes the current values into the live systems. Safe to call repeatedly.</summary>
         public void ApplyToSystems()
         {
-            if (Mod.BudgetSystem != null)
+            var budget = Preset switch
             {
-                Mod.BudgetSystem.Budget = Preset switch
-                {
-                    BudgetPreset.Balanced => RenderBudget.Balanced,
-                    BudgetPreset.TrafficFocus => RenderBudget.TrafficFocus,
-                    BudgetPreset.Aggressive => RenderBudget.Aggressive,
-                    _ => RenderBudget.Off,
-                };
-            }
+                BudgetPreset.Balanced => RenderBudget.Balanced,
+                BudgetPreset.TrafficFocus => RenderBudget.TrafficFocus,
+                BudgetPreset.Aggressive => RenderBudget.Aggressive,
+                _ => RenderBudget.Off,
+            };
+
+            if (Mod.BudgetSystem != null) Mod.BudgetSystem.Budget = budget;
+
+            // The prefab floor is the durable half: it survives the game re-seeding an
+            // entity's culling data from its prefab, which the entity pass alone would not.
+            if (Mod.PrefabFloor != null) Mod.PrefabFloor.Floor = budget.Citizens;
 
             if (Mod.FrameLog != null)
             {
