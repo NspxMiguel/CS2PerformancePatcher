@@ -1,0 +1,12 @@
+# Build output
+bin/
+obj/
+*.user
+
+# Research workspace: decompiled game code and captured logs.
+# Never commit these — they are Paradox's copyrighted code, not ours to redistribute.
+.research/
+
+# OS
+Thumbs.db
+desktop.ini

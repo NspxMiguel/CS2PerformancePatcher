@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{1C1D3FED-D6C9-4714-A8B0-9A618F7EE350}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cs2Patcher.Core", "src\Cs2Patcher.Core\Cs2Patcher.Core.csproj", "{A3CF3033-81B4-4BFD-A568-81222B440EE3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cs2Patcher.Cli", "src\Cs2Patcher.Cli\Cs2Patcher.Cli.csproj", "{A8554F56-E9C3-4AF3-91C5-101B52A0A864}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A3CF3033-81B4-4BFD-A568-81222B440EE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3CF3033-81B4-4BFD-A568-81222B440EE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3CF3033-81B4-4BFD-A568-81222B440EE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3CF3033-81B4-4BFD-A568-81222B440EE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8554F56-E9C3-4AF3-91C5-101B52A0A864}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8554F56-E9C3-4AF3-91C5-101B52A0A864}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8554F56-E9C3-4AF3-91C5-101B52A0A864}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8554F56-E9C3-4AF3-91C5-101B52A0A864}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A3CF3033-81B4-4BFD-A568-81222B440EE3} = {1C1D3FED-D6C9-4714-A8B0-9A618F7EE350}
+		{A8554F56-E9C3-4AF3-91C5-101B52A0A864} = {1C1D3FED-D6C9-4714-A8B0-9A618F7EE350}
+	EndGlobalSection
+EndGlobal
