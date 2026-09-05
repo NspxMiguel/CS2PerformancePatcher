@@ -60,6 +60,21 @@ param(
     [ValidateSet('true', 'false')]
     [string]$ModStopAnimating,
 
+    # Seconds on the BENCHMARK's own clock at which to photograph the game, e.g. 5,20,45,80.
+    # Not seconds since launch: the loading screen and the three-second settle take a different
+    # amount of time every run, so an external stopwatch frames a different street each time.
+    # The mod reads the benchmark's elapsed-time field, which drives the camera path, so two
+    # runs asked for the same marks come back framing the same city.
+    [double[]]$ShotAt = @(),
+
+    # Filename stem for those photographs. They land in .research\bench\shots as <stem>-01.png.
+    [string]$ShotPrefix = 'shot',
+
+    # Render each photograph at this multiple of the window and downsample it. 2 costs a hitch
+    # per shot and removes most of the aliasing, which is worth it for a comparison image and
+    # not worth it for anything being measured.
+    [ValidateRange(1, 4)][int]$ShotSuperSize = 1,
+
     # How long to wait for the result before giving up. A run is 90s plus loading.
     [int]$TimeoutSec = 420,
 
@@ -266,6 +281,28 @@ function Set-ModSetting([string]$Key, [string]$Value) {
     Write-Host "  mod $Key '$Value'"
 }
 
+# The cue the mod's ShotSystem reads. Written before launch and deleted afterwards, because a
+# stale cue would put a screenshot hitch into the middle of the next run that is being timed.
+$shotCueDir  = Join-Path $userData 'Cs2Saver'
+$shotCuePath = Join-Path $shotCueDir 'shots.txt'
+$shotOutDir  = Join-Path $outDir 'shots'
+
+function Remove-ShotCue {
+    if (Test-Path $shotCuePath) {
+        Remove-Item $shotCuePath -Force
+        Write-Host '  shot cue cleared'
+    }
+}
+
+Remove-ShotCue
+if ($ShotAt.Count -gt 0) {
+    New-Item -ItemType Directory -Force -Path $shotCueDir, $shotOutDir | Out-Null
+    $cue = @($shotOutDir, $ShotPrefix, $ShotSuperSize)
+    $cue += $ShotAt | ForEach-Object { $_.ToString([System.Globalization.CultureInfo]::InvariantCulture) }
+    Set-Content -Path $shotCuePath -Value $cue -Encoding utf8
+    Write-Host "  $($ShotAt.Count) shots cued as '$ShotPrefix' at benchmark t=$($ShotAt -join ', ')s"
+}
+
 if ($ModPreset) { Set-ModSetting 'Preset' $ModPreset }
 if ($ModLook) { Set-ModSetting 'CityLook' $ModLook }
 if ($ModSurface) { Set-ModSetting 'CitySurface' $ModSurface }
@@ -359,4 +396,5 @@ finally {
     # Whether the run succeeded, timed out or threw, the player gets their own mod
     # settings back. This script only borrowed them.
     Restore-ModSettings
+    Remove-ShotCue
 }

@@ -33,6 +33,7 @@
                         Unity.Mathematics;
                         Unity.Burst;
                         UnityEngine.CoreModule;
+                        UnityEngine.ScreenCaptureModule;
                         Unity.RenderPipelines.Core.Runtime;
                         Unity.RenderPipelines.HighDefinition.Runtime">
       <HintPath>$(GameManagedDir)\%(Identity).dll</HintPath>

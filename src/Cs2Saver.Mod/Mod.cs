@@ -27,6 +27,7 @@ namespace Cs2Saver
         internal static CityLookSystem CityLook;
         internal static MaterialStyleSystem MaterialStyle;
         internal static HitchLogSystem HitchLog;
+        internal static ShotSystem Shots;
         internal static Settings Setting;
 
         public void OnLoad(UpdateSystem updateSystem)
@@ -94,6 +95,14 @@ namespace Cs2Saver
                 FrameLog.Recording = false;
             });
 
+            TryRegister("timed shots", () =>
+            {
+                // LateUpdate, so the frame being photographed is the finished one. Inert unless
+                // a cue file is sitting next to the logs, which only the benchmark runner writes.
+                updateSystem.UpdateAt<ShotSystem>(SystemUpdatePhase.LateUpdate);
+                Shots = updateSystem.World.GetOrCreateSystemManaged<ShotSystem>();
+            });
+
             // Registered last, so the systems it drives already exist when it applies itself.
             TryRegister("settings", () =>
             {
@@ -155,6 +164,7 @@ namespace Cs2Saver
                 MaterialStyle = null;
                 FrameLog = null;
                 HitchLog = null;
+                Shots = null;
                 Log.Info($"{nameof(Cs2Saver)} unloaded.");
             }
         }
