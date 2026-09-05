@@ -146,7 +146,13 @@ namespace Cs2Saver
 
                 // Same reason for both: the city keeps this mod's colour grading and its flattened
                 // materials after the mod itself is gone unless they are handed back here.
-                if (CityLook != null) CityLook.Look = Look.Off;
+                // Reach before Look: the reach is what holds the sun's shadow on, and clearing it
+                // is what hands the light back to the game.
+                if (CityLook != null)
+                {
+                    CityLook.Reach = ShadowReach.Untouched;
+                    CityLook.Look = Look.Off;
+                }
                 if (MaterialStyle != null) MaterialStyle.Surface = Surface.Off;
 
                 if (FrameLog != null) FrameLog.Recording = false;

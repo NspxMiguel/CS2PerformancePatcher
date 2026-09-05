@@ -58,6 +58,23 @@ namespace Cs2Saver
         public Look CityLook { get; set; } = Look.Off;
 
         /// <summary>
+        /// How far from the camera the sun's shadows are drawn.
+        ///
+        /// <para>This bounds shadows; it does not create them. If the graphics profile in use has
+        /// the sun's shadows switched off, nothing here brings them back — that is the game's own
+        /// setting and only a profile reaches it.</para>
+        ///
+        /// <para>Where it does apply, it is a saving rather than a cost, and a large one: the
+        /// game offers a resolution and a cascade count, both of which trade sharpness across the
+        /// whole shadowed area, and neither of which is the trade worth making. Distance is. On
+        /// the reference machine the shadow pass measured 5.3 frames per second at the game's own
+        /// distance and 2.5 at a hundred metres — half the cost, and nothing lost anywhere a
+        /// player was looking closely enough to notice a shadow.</para>
+        /// </summary>
+        [SettingsUISection(MainSection, RenderingGroup)]
+        public ShadowReach SunShadows { get; set; } = ShadowReach.Untouched;
+
+        /// <summary>
         /// How much of the city's greenery survives. Kept apart from the preset above because
         /// it is the one cut here that is taste rather than degree: five frames per second
         /// separate a city with trees from one without, and that is not a call to make for
@@ -97,6 +114,7 @@ namespace Cs2Saver
         {
             Preset = BudgetPreset.Off;
             CityLook = Look.Off;
+            SunShadows = ShadowReach.Untouched;
             CitySurface = Surface.Off;
             Greenery = RenderBudget.Foliage.Balanced;
             WatchForHitches = false;
@@ -130,7 +148,11 @@ namespace Cs2Saver
             // per-frame equivalent worth sweeping.
             if (Mod.PrefabFloor != null) Mod.PrefabFloor.Budget = budget;
 
-            if (Mod.CityLook != null) Mod.CityLook.Look = CityLook;
+            if (Mod.CityLook != null)
+            {
+                Mod.CityLook.Look = CityLook;
+                Mod.CityLook.Reach = SunShadows;
+            }
 
             // One survey per session, once a city is loaded. It writes what the city is actually
             // built from into the log, which is the only reliable way to find out: a material

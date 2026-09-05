@@ -722,3 +722,88 @@ own, it is deterministic, and nothing this project can set reaches it.
 
 `cs2patch bench` now carries a `worst` and a `>50ms` column, because the tool could not previously
 report the problem its users were describing.
+
+## Before/after photographs, and why the first set was worthless
+
+The obvious way to photograph a benchmark is from outside: launch, wait *n* seconds, grab the
+window. Ten pairs taken that way had five that framed different streets, and the two that matched
+best matched because they were taken before the run had started — they still had the HUD in them.
+The wall clock outside the game measures the launcher, the level load and the benchmark's
+three-second settle as well as the run, and none of those take the same time twice.
+
+`BenchmarkUISystem` accumulates `unscaledDeltaTime` into `m_TotalElapsed` and hands that straight
+to the camera path as its parameter:
+
+```csharp
+m_TotalElapsed += unscaledDeltaTime;
+...
+float t = Mathf.Min(m_TotalElapsed, m_CameraPath.playbackDuration);
+m_CameraPath.Refresh(t, s_EmptyPhotoModeProperties, cinematicCameraController);
+```
+
+Camera position is therefore a pure function of elapsed benchmark time. A 25 fps run and a 51 fps
+run reach the same corner at the same reading, and the frame-rate dependence this project assumed
+for months does not exist. `ShotSystem` reflects that field and fires `ScreenCapture` at requested
+marks; ten marks landed within 20 ms of target in both runs and all ten pairs framed the same view.
+
+Two things fall out of doing it from inside the game. The benchmark hides the HUD while it runs,
+so the results are photographs rather than screenshots with a toolbar in them. And the capture is
+driven by a cue file the runner writes and deletes, so it cannot leak into a player's settings or
+put a screenshot hitch into the next run that is being timed.
+
+## What the pictures said, which the numbers had not
+
+Matched pairs of `handsome` against stock, in daylight, were not flattering. Grass went from
+saturated green to pale olive, the sports field lost its markings, and the whole frame lifted
+toward mid-grey. The cause was not the colour grading, which was doing its job; it was that
+`super-potato` — which `handsome` inherited from — switches off both the sun's shadow and ambient
+occlusion. A city with neither is not a stylised city. It is a flat one: grass with no texture,
+buildings with no volume, trees pasted onto the ground.
+
+Priced against a same-session control, both turned out to be affordable after all:
+
+| | avg fps | vs control |
+|---|---|---|
+| `handsome`, control | 51.0 | — |
+| + ambient occlusion, 4 steps / 24 px | 50.0 | −1.0 |
+| + sun shadow, 1 cascade, 1024, bounded to 100 m | 46.3* | −2.5 |
+| + sun shadow at the game's own distance | 45.1 | −5.3 |
+
+\* measured with `Cs2Saver` bounding the distance; see below.
+
+Both are now in `handsome`. The tier's claim is that sixty frames do not have to look like sixty
+frames cost anything, and without these it could not make that claim.
+
+## The shadow knob the game does not have
+
+HDRP keeps the sun's shadow distance in an `HDShadowSettings` volume component. The game creates
+one and exposes a resolution and a cascade count from it — never `maxShadowDistance`. So it is a
+lever no settings file reaches, which makes it exactly the kind of thing the mod exists for: a
+global volume at priority 10,000 overrides it, and the cost of the shadow pass halves.
+
+Three things have to be true at once for a directional shadow to render, and finding that out cost
+four benchmark runs:
+
+1. `ShadowsQualitySettings.enabled` — the game's own setting, which calls `EnableShadows` on the
+   light tagged `SunLight`.
+2. `cascadeShadowSplitCount` above zero. Every fast tier sets it to zero, and zero cascades means
+   HDRP draws no directional shadow whatever the light says.
+3. A non-zero `directionalShadowResolution`. A profile that enables shadows without naming one
+   inherits whatever is in the settings file, and a file written while shadows were off holds the
+   C# default, which is zero.
+
+Setting the last two from the mod while the first stays off produces nothing — no shadow, no cost,
+no error, and a log line reporting success. There is a fourth gate somewhere in how the game hands
+the sun to HDRP; it was not worth more runs to find, because a tuning profile reaches the first
+condition from the front and the mod's job here is the distance.
+
+## Absolute frame rates drift between sessions; ratios do not
+
+A `handsome` control measured 53.7 in one session and 51.0 in another, on the same machine, same
+build, same settings, with the host under 6% both times. The ladder in this document and in the
+profile selector is therefore only meaningful as a set of runs taken together: a table assembled
+from measurements hours apart compares the machine's mood as much as the settings.
+
+Every published ladder is one session, and every A/B in this document is a run against a control
+taken beside it. Nothing here should be read as "this profile gives you N fps" — only as "this
+profile gives you N times what stock gives you on the same afternoon".

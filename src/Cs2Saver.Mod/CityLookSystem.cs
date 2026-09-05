@@ -40,6 +40,23 @@ namespace Cs2Saver
         /// <summary>Priority high enough to sit above the game's own volumes without a fight.</summary>
         private const float OverrideEverything = 10_000f;
 
+        /// <summary>How the game tags its directional light. Found by tag there and here.</summary>
+        private const string SunLightTag = "SunLight";
+
+        /// <summary>
+        /// Frames between checks that the sun still has the shadow this mod asked for. Two
+        /// seconds at sixty, which is fast enough that a player closing the options page never
+        /// sees the shadow missing and slow enough to cost nothing.
+        /// </summary>
+        private const int SunRecheckFrames = 120;
+
+        /// <summary>
+        /// Texels on a side for the forced sun shadow. The game's own Low preset uses this, and
+        /// there is no reason to go above it: the reach setting keeps the map over a small patch
+        /// of city, so 1024 texels here are denser than 4096 spread across the whole view.
+        /// </summary>
+        private const int ForcedShadowResolution = 1024;
+
         private GameObject m_Holder;
         private Volume m_Volume;
         private ColorAdjustments m_Color;
@@ -50,10 +67,20 @@ namespace Cs2Saver
         private ColorCurves m_Curves;
         private Bloom m_Bloom;
         private IndirectLightingController m_Indirect;
+        private HDShadowSettings m_Shadow;
         private TextureCurve m_Linear;
         private TextureCurve m_Stepped;
 
+        private HDAdditionalLightData m_Sun;
+        private Light m_SunLight;
+        private LightShadows m_SunShadowsBefore;
+        private bool m_SunWasForced;
+        private bool m_SunReported;
+        private int m_SunSearches;
+        private int m_SunCountdown;
+
         private Look m_Look = Look.Off;
+        private ShadowReach m_Reach = ShadowReach.Untouched;
         private bool m_Dirty = true;
         private bool m_Failed;
 
@@ -69,10 +96,47 @@ namespace Cs2Saver
             }
         }
 
+        /// <summary>
+        /// How far from the camera the sun's shadows are drawn, in metres.
+        ///
+        /// <para>Unlike everything else on this system, this one costs frames — it is here rather
+        /// than in its own system only because the volume it needs already exists here.</para>
+        /// </summary>
+        public ShadowReach Reach
+        {
+            get => m_Reach;
+            set
+            {
+                if (value == m_Reach) return;
+                m_Reach = value;
+                m_Dirty = true;
+            }
+        }
+
         protected override void OnUpdate()
         {
-            if (m_Failed || !m_Dirty) return;
+            if (m_Failed) return;
+
+            // The sun is the one thing here the game can take back on its own, so it is checked
+            // on a timer instead of only when something on this system changes.
+            if (!m_Dirty && m_Reach != ShadowReach.Untouched)
+            {
+                if (--m_SunCountdown > 0) return;
+                m_SunCountdown = SunRecheckFrames;
+
+                try { ForceSun(); }
+                catch (System.Exception ex)
+                {
+                    m_Failed = true;
+                    Mod.Log.Error(ex, "Could not hold the sun's shadow on; leaving it to the game.");
+                }
+
+                return;
+            }
+
+            if (!m_Dirty) return;
             m_Dirty = false;
+            m_SunCountdown = SunRecheckFrames;
 
             try
             {
@@ -111,6 +175,11 @@ namespace Cs2Saver
             m_Bloom = profile.Add<Bloom>();
             m_Indirect = profile.Add<IndirectLightingController>();
 
+            // The one component here that is not colour. HDRP keeps the sun's shadow distance in
+            // a volume rather than in a light, and the game exposes a resolution and a cascade
+            // count but never the distance -- so this is a knob no settings file can turn.
+            m_Shadow = profile.Add<HDShadowSettings>();
+
             m_Linear = Ramp(bands: 0);
             // Fourteen, not nine. Nine was tried on a real city and read as damage rather than as
             // style: the steps are far enough apart that neighbouring surfaces jump colour, which
@@ -123,13 +192,41 @@ namespace Cs2Saver
 
         private void Apply(Look look)
         {
+            // The volume carries two unrelated things now, so it stays alive while either wants
+            // it. Disabling it whenever the look is Off would have quietly taken the shadow reach
+            // with it, which is the kind of coupling that only shows up as "the setting does
+            // nothing" three profiles later.
+            // Before the early return below, not after: with both switched off this is the call
+            // that hands the sun back, and skipping it would leave a forced shadow burning after
+            // the player had turned the feature off.
+            ApplyReach();
+
+            m_Volume.enabled = look != Cs2Saver.Look.Off || m_Reach != ShadowReach.Untouched;
+            if (!m_Volume.enabled) return;
+
             if (look == Cs2Saver.Look.Off)
             {
-                m_Volume.enabled = false;
+                // Reach only. Every grading component goes inactive so the game's own colour
+                // comes back untouched, which is what Off has always promised.
+                foreach (var component in new VolumeComponent[]
+                         {
+                             m_Color, m_Tonemapping, m_SplitToning, m_WhiteBalance,
+                             m_Vignette, m_Curves, m_Bloom, m_Indirect,
+                         })
+                {
+                    if (component != null) component.active = false;
+                }
+
                 return;
             }
 
-            m_Volume.enabled = true;
+            foreach (var component in new VolumeComponent[]
+                     {
+                         m_Color, m_Tonemapping, m_SplitToning, m_WhiteBalance, m_Bloom, m_Indirect,
+                     })
+            {
+                if (component != null) component.active = true;
+            }
 
             // Neutral starting point for the two components that are not set by every look. A
             // volume override sticks until something overwrites it, so without this a preset
@@ -223,6 +320,157 @@ namespace Cs2Saver
             // or it would inherit whatever the last one left behind.
             m_Curves.active = true;
             m_Curves.master.Override(look == Cs2Saver.Look.Cel ? m_Stepped : m_Linear);
+        }
+
+        /// <summary>
+        /// Pulls the sun's shadow distance in to <see cref="Reach"/> metres, or leaves the game's
+        /// own alone.
+        ///
+        /// <para>The game's shadow settings are a resolution and a cascade count, and both of
+        /// those trade sharpness for cost across the whole shadowed area. Distance is a different
+        /// trade and a better one for this project: every building outside the radius stops being
+        /// rasterised into the shadow map at all, and near the camera — which is where a player
+        /// is looking, and the only place a shadow reads as anything but a smudge — nothing is
+        /// lost. It also spends the resolution better, because one cascade covering 150 metres
+        /// has the texel density of a much larger map covering the whole view.</para>
+        ///
+        /// <para>Only the distance is overridden. Cascade count and split ratios are left
+        /// unspecified so they blend through from whatever the game set, which means a player who
+        /// has chosen four cascades still gets four.</para>
+        /// </summary>
+        private void ApplyReach()
+        {
+            if (m_Shadow == null) return;
+
+            if (m_Reach == ShadowReach.Untouched)
+            {
+                m_Shadow.active = false;
+                RestoreSun();
+                return;
+            }
+
+            m_Shadow.active = true;
+            m_Shadow.maxShadowDistance.Override((float)(int)m_Reach);
+
+            // The cascade count has to come with the distance, and finding that out cost two
+            // benchmark runs. Every fast tier sets ExtraQualitySettings.cascadeShadowSplitCount
+            // to zero, and zero cascades means HDRP renders no directional shadow at all — so
+            // switching the sun's shadow back on and bounding its distance both succeeded, logged
+            // success, and changed not one pixel.
+            //
+            // One cascade rather than more. Cascades exist to spend shadow-map resolution where
+            // the eye is, and this setting has already solved that problem by refusing to draw
+            // shadows further away than the reach; splitting the map again on top of that buys
+            // nothing and costs a second rasterisation of the scene.
+            m_Shadow.cascadeShadowSplitCount.Override(1);
+
+            ForceSun();
+        }
+
+        /// <summary>
+        /// Makes sure the sun is in a state where it can cast the shadow this setting bounds.
+        ///
+        /// <para><b>This does not turn shadows on by itself, and four benchmark runs went into
+        /// establishing that.</b> Enabling them needs the game's own
+        /// <c>ShadowsQualitySettings.enabled</c> — which is to say, a tuning profile that asks
+        /// for shadows. With that switched off, setting <c>legacyLight.shadows</c> to Soft
+        /// succeeds, reports success, and renders nothing; so does adding a cascade; so does
+        /// forcing the resolution. There is a fourth gate somewhere in how the game hands the sun
+        /// to HDRP, and finding it was not worth more runs when the profile already reaches it
+        /// from the front.</para>
+        ///
+        /// <para>What is kept here is the part that is load-bearing when a profile does ask for
+        /// shadows: the resolution. A profile that enables shadows without naming a resolution
+        /// gets whatever is in the settings file, and a file written while shadows were off holds
+        /// a zero there — which produces a light with shadows enabled, a cascade to render them
+        /// into, and no texels to render them with.</para>
+        ///
+        /// <para>The game finds this light by tag and so does this. Reasserted on a slow poll
+        /// rather than every frame: the game re-applies its own quality settings whenever the
+        /// options page is touched or a save is loaded, and that would otherwise silently undo
+        /// this until something else marked the look dirty.</para>
+        /// </summary>
+        private void ForceSun()
+        {
+            if (!FindSun()) return;
+
+            if (!m_SunWasForced)
+            {
+                m_SunShadowsBefore = m_SunLight.shadows;
+                m_SunWasForced = true;
+            }
+
+            if (m_SunLight.shadows == LightShadows.None)
+            {
+                // Soft rather than Hard: the shadow map here is small and close, and a hard edge
+                // on 1024 texels stretched over a street reads as a staircase.
+                m_Sun.EnableShadows(true);
+                m_SunLight.shadows = LightShadows.Soft;
+            }
+
+            // The third thing that has to be true, and the last one to be found. A profile with
+            // shadows switched off leaves every field of ShadowsQualitySettings at its C# default,
+            // which for the resolution is zero -- and the game hands that zero to the light
+            // whether shadows are on or not. A light with shadows enabled, a cascade to render
+            // them into and a zero-texel map produces exactly nothing, silently.
+            m_Sun.SetShadowResolutionOverride(true);
+            m_Sun.SetShadowResolution(ForcedShadowResolution);
+
+            // Once per session, and only the first time. A silent no-op is the failure mode this
+            // whole feature is most likely to have -- the first attempt at it logged nothing,
+            // changed nothing and cost nothing, which took a benchmark run to notice.
+            if (!m_SunReported)
+            {
+                m_SunReported = true;
+                Mod.Log.Info(
+                    $"Sun shadow forced on at {(int)m_Reach}m " +
+                    $"(was {m_SunShadowsBefore}, now {m_SunLight.shadows}, " +
+                    $"HDRP dimmer {m_Sun.shadowDimmer:F2}).");
+            }
+        }
+
+        /// <summary>Hands the sun back exactly as it was found, for Untouched and for unload.</summary>
+        private void RestoreSun()
+        {
+            if (!m_SunWasForced || !FindSun()) return;
+
+            m_SunLight.shadows = m_SunShadowsBefore;
+            m_Sun.EnableShadows(m_SunShadowsBefore != LightShadows.None);
+            m_SunWasForced = false;
+        }
+
+        private bool FindSun()
+        {
+            if (m_Sun != null && m_SunLight != null) return true;
+
+            var holder = GameObject.FindGameObjectWithTag(SunLightTag);
+            if (holder == null)
+            {
+                // Not an error while the main menu is up -- there is no sun until a city loads.
+                // Worth one line after enough tries that "no city yet" has stopped being the
+                // explanation, because a missing tag looks identical from here.
+                if (++m_SunSearches == 20)
+                {
+                    Mod.Log.Warn(
+                        $"No object tagged '{SunLightTag}' after {m_SunSearches} tries; " +
+                        "the sun shadow setting will do nothing.");
+                }
+
+                return false;
+            }
+
+            m_Sun = holder.GetComponent<HDAdditionalLightData>();
+            m_SunLight = holder.GetComponent<Light>();
+
+            if (m_Sun == null || m_SunLight == null)
+            {
+                Mod.Log.Warn(
+                    $"Found '{SunLightTag}' but it has no " +
+                    $"{(m_SunLight == null ? "Light" : "HDAdditionalLightData")}; standing down.");
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -374,5 +622,31 @@ namespace Cs2Saver
 
         /// <summary>The drawn one: flat bands of light instead of a smooth gradient.</summary>
         Cel,
+    }
+
+    /// <summary>
+    /// How far the sun's shadows are drawn, in metres. The value is the distance, so the enum
+    /// documents itself and the code never needs a lookup table.
+    ///
+    /// <para>The names describe what still has a shadow at that distance rather than the number,
+    /// because the number means nothing to anyone who has not stood in the city and measured a
+    /// block.</para>
+    /// </summary>
+    public enum ShadowReach
+    {
+        /// <summary>Whatever the game asked for. The only value that changes nothing.</summary>
+        Untouched = 0,
+
+        /// <summary>The building you are looking at and its neighbours.</summary>
+        Block = 100,
+
+        /// <summary>The street and the ones crossing it.</summary>
+        Street = 175,
+
+        /// <summary>Everything a zoomed-in camera can see.</summary>
+        Neighbourhood = 300,
+
+        /// <summary>Far enough to survive zooming out one step.</summary>
+        District = 500,
     }
 }

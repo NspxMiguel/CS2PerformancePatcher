@@ -124,6 +124,26 @@ namespace Cs2Saver
                 { m_Settings.GetEnumValueLocaleID(Look.Cel), "Desenho — luz em faixas chapadas" },
 
                 {
+                    m_Settings.GetOptionLabelLocaleID(nameof(Settings.SunShadows)),
+                    "Até onde a sombra do sol chega"
+                },
+                {
+                    m_Settings.GetOptionDescLocaleID(nameof(Settings.SunShadows)),
+                    "Limita a sombra do sol; não a cria. Se o perfil gráfico em uso desligou a " +
+                    "sombra, nada aqui a traz de volta — isso é configuração do jogo e só um " +
+                    "perfil alcança. Onde vale, é economia e não gasto: o jogo oferece resolução " +
+                    "e número de cascatas, e nenhuma das duas é a troca certa; a distância é. Na " +
+                    "máquina de referência a sombra custou 5,3 quadros por segundo na distância " +
+                    "do próprio jogo e 2,5 a cem metros — metade do preço, sem perder nada onde " +
+                    "alguém estava perto o bastante para reparar numa sombra."
+                },
+                { m_Settings.GetEnumValueLocaleID(ShadowReach.Untouched), "Como o jogo pediu — sem mexer" },
+                { m_Settings.GetEnumValueLocaleID(ShadowReach.Block), "Quarteirão — 100 m, o mais barato que ainda dá volume" },
+                { m_Settings.GetEnumValueLocaleID(ShadowReach.Street), "Rua — 175 m, a rua e as que cruzam com ela" },
+                { m_Settings.GetEnumValueLocaleID(ShadowReach.Neighbourhood), "Bairro — 300 m, tudo que a câmera de perto vê" },
+                { m_Settings.GetEnumValueLocaleID(ShadowReach.District), "Distrito — 500 m, sobrevive a afastar um passo" },
+
+                {
                     m_Settings.GetOptionLabelLocaleID(nameof(Settings.CitySurface)),
                     "Como as superfícies pegam a luz"
                 },

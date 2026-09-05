@@ -454,8 +454,44 @@ public static class Profiles
             new(Lod, "levelOfDetail", 0.35, Cost.Cheap,
                 "The game's own Low preset rather than the floor, so buildings keep their outline.",
                 0.1, 1.0),
+
+            // Bought back from SuperPotato, which switches both off. Photographs of the same
+            // benchmark frame with and without settled it: a city with no sun shadow and no
+            // ambient occlusion is not a stylised city, it is a flat one — grass with no texture,
+            // buildings with no volume, trees pasted on. This tier's whole claim is that it does
+            // not look like sixty frames cost anything, and it could not make that claim.
+            //
+            // Priced against a same-session control at 48.8: shadows 2.5 and occlusion 0.9.
+            // The shadow number depends on Cs2Saver bounding the distance -- at the game's own
+            // distance the same shadows cost 5.3.
+            new(Shadows, "enabled", true, Cost.Cheap,
+                "The sun's shadow, back on. Without it the city reads flat rather than stylised."),
+
+            // Not optional alongside the line above. A profile that enables shadows without
+            // naming a resolution inherits whatever is in the settings file, and a file written
+            // while shadows were off holds a zero -- which renders nothing at all.
+            new(Shadows, "directionalShadowResolution", 1024, Cost.Cheap,
+                "The game's own Low value. Zero is what this field holds when shadows were off."),
+
+            new(Extra, "cascadeShadowSplitCount", 1, Cost.Cheap,
+                "One cascade. Zero means HDRP draws no directional shadow whatever the light says.",
+                0, 4),
+
+            new(Shadows, "terrainCastShadows", false, Cost.Cheap,
+                "Terrain still casts nothing. Hills shadowing hills is not what was missing."),
+
+            new(Shadows, "shadowCullingThresholdHeight", 5.0, Cost.Cheap,
+                "Only things tall enough for their shadow to read as one get to cast."),
+            new(Shadows, "shadowCullingThresholdVolume", 8.0, Cost.Cheap,
+                "Same, by volume. Street furniture stops paying into the shadow map."),
+
+            new(Ssao, "enabled", true, Cost.Cheap,
+                "Ambient occlusion, back on. It is what puts a building back on its ground."),
+            new(Ssao, "stepCount", 4, Cost.Cheap, "Fewest samples the effect still reads at.", 2, 32),
+            new(Ssao, "maxPixelRadius", 24, Cost.Cheap, "Contact shading, not a global darkening.",
+                16, 256),
         ],
-        new Measured(58.1, 30.9, 53));
+        new Measured(46.0, 24.0, 32));
 
     /// <summary>
     /// Below the bottom. For hardware where the question is whether the game runs at all.

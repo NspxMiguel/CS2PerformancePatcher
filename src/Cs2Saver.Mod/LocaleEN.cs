@@ -103,6 +103,26 @@ namespace Cs2Saver
                 { m_Settings.GetEnumValueLocaleID(RenderBudget.Foliage.Thin), "Thin — fields where a forest was, and five frames for it" },
 
                 {
+                    m_Settings.GetOptionLabelLocaleID(nameof(Settings.SunShadows)),
+                    "How far the sun's shadow reaches"
+                },
+                {
+                    m_Settings.GetOptionDescLocaleID(nameof(Settings.SunShadows)),
+                    "Bounds the sun's shadow; it does not create one. If the graphics profile in " +
+                    "use has shadows switched off, nothing here brings them back — that is the " +
+                    "game's own setting and only a profile reaches it. Where it does apply it is " +
+                    "a saving, not a cost: the game offers a resolution and a cascade count, and " +
+                    "distance is the better trade than either. On the reference machine the " +
+                    "shadow pass cost 5.3 fps at the game's own distance and 2.5 at a hundred " +
+                    "metres — half the price, with nothing lost anywhere close enough to notice."
+                },
+                { m_Settings.GetEnumValueLocaleID(ShadowReach.Untouched), "As the game asked — untouched" },
+                { m_Settings.GetEnumValueLocaleID(ShadowReach.Block), "Block — 100 m, the cheapest that still gives shape" },
+                { m_Settings.GetEnumValueLocaleID(ShadowReach.Street), "Street — 175 m, this street and the ones crossing it" },
+                { m_Settings.GetEnumValueLocaleID(ShadowReach.Neighbourhood), "Neighbourhood — 300 m, everything a close camera sees" },
+                { m_Settings.GetEnumValueLocaleID(ShadowReach.District), "District — 500 m, survives zooming out a step" },
+
+                {
                     m_Settings.GetOptionLabelLocaleID(nameof(Settings.CitySurface)),
                     "How surfaces catch the light"
                 },

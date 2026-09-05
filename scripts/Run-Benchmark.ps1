@@ -52,6 +52,12 @@ param(
     [ValidateSet('Off', 'Vivid', 'Toybox', 'Miniature', 'Showroom', 'Cel')]
     [string]$ModLook,
 
+    # Cs2Saver sun-shadow distance, named rather than numbered. The one mod knob that spends
+    # frames instead of buying them, so it gets measured like a profile tweak rather than
+    # assumed like the grading.
+    [ValidateSet('Untouched', 'Block', 'Street', 'Neighbourhood', 'District')]
+    [string]$ModShadows,
+
     # Cs2Saver material restyle. Same mechanism again.
     [ValidateSet('Off', 'Matte', 'Painted')]
     [string]$ModSurface,
@@ -305,6 +311,7 @@ if ($ShotAt.Count -gt 0) {
 
 if ($ModPreset) { Set-ModSetting 'Preset' $ModPreset }
 if ($ModLook) { Set-ModSetting 'CityLook' $ModLook }
+if ($ModShadows) { Set-ModSetting 'SunShadows' $ModShadows }
 if ($ModSurface) { Set-ModSetting 'CitySurface' $ModSurface }
 if ($ModStopAnimating) { Set-ModFlag 'StopAnimating' ($ModStopAnimating -eq 'true') }
 
