@@ -252,4 +252,14 @@ Not yet done, in rough order of value:
 
 ## Licence
 
-Not yet chosen.
+GPL-3.0. See [LICENSE](LICENSE).
+
+The intent behind that choice is worth stating, because it is a common misunderstanding: **no
+open-source licence forbids charging money, and this one does not either.** What it does is
+require that anyone who distributes this — modified or not — ships the source under the same
+terms. So nobody can take this work, close it, and sell it as their own product, which is the
+outcome the choice was made to prevent.
+
+Nothing from Cities: Skylines II is in this repository. The patcher transforms the files already
+on your machine and ships none of Paradox's. The decompiled code used to work out what the game
+does lives under `.research/`, which is not tracked, and never will be.
