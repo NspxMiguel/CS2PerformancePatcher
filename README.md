@@ -50,11 +50,19 @@ Every bound the patcher enforces was read out of the game's own `[SettingsUISlid
 
 ## Profiles
 
-| Profile   | Changes | What it costs you |
-|-----------|---------|-------------------|
-| `free`    | 5       | Nothing you can see. Removes work that produces no visible pixels. |
-| `traffic` | 19      | Effects you do not look at. The city and traffic stay sharp. **Start here.** |
-| `potato`  | 32      | Visible cuts, deliberately. For hardware well under the requirements. |
+| Profile        | What it costs you | Measured here |
+|----------------|-------------------|---------------|
+| `free`         | Nothing you can see. Removes work that produces no visible pixels. | +5% |
+| `traffic`      | Effects you do not look at. City and traffic stay sharp. **Start here.** | +6% |
+| `sharp`        | Every screen-space effect. Geometry and textures completely untouched. | +33% |
+| `skyline`      | The sun's shadows and the clutter. Buildings and textures stay sharp. **Best trade.** | +127% |
+| `potato`       | Visible cuts, including blurrier textures. For hardware with no upscaler. | +62% |
+| `super-potato` | Everything. It looks how it sounds. | +130% |
+
+Percentages are average fps against untouched settings on the machine in
+[docs/FINDINGS.md](docs/FINDINGS.md), and `skyline` assumes the mod is installed — about a fifth of
+its gain comes from there. Note that `skyline` beats `potato` on speed *and* on looks; `potato`
+is kept for machines with no upscaler at all, where its mip bias is doing real work.
 
 Each change is tagged `Free`, `Cheap`, or `Visible`, and `cs2patch apply` prints every one with its
 before and after value. Nothing happens that you cannot see happening.
@@ -65,10 +73,12 @@ and re-upload meshes it is about to need again. VRAM is read from the game's own
 reports the true figure — Windows' `Win32_VideoController.AdapterRAM` is a 32-bit field that
 saturates at 4096 MB and will tell you an 8 GB card has 4 GB.
 
-## The code mod (experimental)
+## The code mod
 
-Settings can only move global dials. "Keep the city sharp but stop drawing pedestrians at
-distance" needs per-entity control, which is what `Cs2Saver` does.
+Settings can only move global dials. The game's detail slider scales every LOD transition at once,
+buildings included — which is exactly what makes a city look like modelling clay. `Cs2Saver` exists
+to make that distinction, because prefabs carry components saying what they are and **a setting
+cannot say "cut the street furniture but not the buildings."**
 
 ```
 cs2patch install-mod      # copy it into the game's local mods folder
@@ -79,15 +89,31 @@ Then enable it in the game's mod list and open its options page. It ships **off*
 changes until you pick a preset.
 
 **How it works.** Every visibility test in the game reduces to
-`CalculateMaxLod(bounds, camera) >= CullingInfo.m_MinLod`, where `m_MinLod` is a per-entity byte.
-The LOD value falls with distance, so raising the floor culls sooner — and because
-`CalculateDistanceFactor(lod) = pow(2, (128 - lod) / 6)`, **every +6 halves render distance**.
-The mod raises that floor on pedestrians and vehicles only. Buildings, roads and terrain are
-never touched, so the city looks identical.
+`CalculateMaxLod(bounds, camera) >= m_MinLod`. The LOD value falls with distance, so raising the
+floor culls sooner — and because `CalculateDistanceFactor(lod) = pow(2, (128 - lod) / 6)`,
+**every +6 halves render distance**. Every setting in the mod is therefore expressed as a count of
+halvings, per category, applied to the prefab so the game hands the value back rather than
+overwriting it.
 
-The write only ever *raises* the floor, never sets an absolute value or accumulates an offset,
-which makes running it every frame idempotent and lets the game rebuild culling data whenever it
-likes without the mod fighting it.
+`BuildingData` is excluded from every query. That is the promise, and it is enforced by category
+rather than by keeping the numbers small.
+
+Each prefab's untouched value is remembered, so every pass is computed from the original rather
+than from the last result. That keeps the work idempotent, keeps the cut *relative* to each
+object's own size — a large tree still outlives a shrub — and means turning the mod off actually
+puts the city back rather than leaving it cut until you restart.
+
+**What it is worth.** On the finished `skyline` configuration, where the settings have already
+given everything they have:
+
+| | avg | 1% low | at normal play speed |
+|---|---|---|---|
+| settings only | 42.7 | 20.3 | 47.0 |
+| with the mod at Declutter | **51.5** | **22.6** | **59.0** |
+
+The category counts explain where that comes from: the city has 14,291 prop prefabs against 20
+kinds of tree, 99 vehicles and 25 creatures. The cost was never the crowds — an earlier version of
+this mod culled only pedestrians and vehicles and measured as nothing at all.
 
 **It also records frame timings.** Turn on "Record frame timings" and it writes a CSV every ten
 seconds: average FPS plus the 1% and 0.1% lows. The lows are the point — an average can improve
@@ -95,12 +121,12 @@ while the game feels worse, and only the percentiles show that. Use it to check 
 actually helped on *your* machine rather than trusting anybody's numbers, including this
 repository's.
 
-**Two honest caveats.** It is not runtime tested — it compiles against the real `Game.dll` of
-1.6.0f1, which validates every API it touches, but no frame has been rendered with it loaded.
-And because it is built with plain `dotnet build` rather than the official Mod Post Processor,
-there is no Burst-compiled native companion, so its job runs as managed code. For a loop that
-takes a `max` over one byte per entity that is unlikely to matter, but it is a real difference
-from what the official toolchain produces.
+**One honest caveat.** It is built with plain `dotnet build` rather than the official Mod Post
+Processor, so there is no Burst-compiled native companion and its work runs as managed code. That
+mattered once: an earlier version swept every pedestrian and vehicle every frame and cost 5 ms of
+CPU to save under 1 ms of GPU. The current design does its work only when something changes, over
+a few thousand prefabs rather than millions of instances, so the managed cost no longer shows up
+in a measurement — but it is still a real difference from what the official toolchain produces.
 
 ## Safety
 
@@ -149,24 +175,37 @@ feel rough, and it moves independently of the average.
 
 ## Status
 
-Working and tested end to end on game version `1.6.0f1 (419.d6c6)`, Unity 2022.3.71f1, and now
-measured — see [docs/FINDINGS.md](docs/FINDINGS.md) for the full table.
+Working, measured, and the mod runs. Game version `1.6.0f1 (419.d6c6)`, Unity 2022.3.71f1. The
+full table is in [docs/FINDINGS.md](docs/FINDINGS.md).
 
-The short version, on an RTX 3050 at 1080p: `free` and `traffic` are worth about 5-6% and move the
-1% low not at all. `potato` is worth 62% on the average. The two changes that matter most are not
-in any profile yet — forcing DLSS past the quality level the game picks for itself (+86% average,
-+33% on the 1% low) and disabling shadow cascades entirely (+25% on the 1% low).
+On an RTX 3050 with a Ryzen 5 4600G at 1080p, over the city the game ships for its own benchmark:
+
+| | avg | 1% low | GPU |
+|---|---|---|---|
+| untouched | 22.7 | 10.5 | 43.8 ms |
+| `skyline` + mod | **51.5** | **22.6** | 18.6 ms |
+
+Split by what the benchmark is doing, because it spends 35 of its 90 seconds at triple simulation
+speed and a single average hides that:
+
+| | paused | normal speed | 3x speed |
+|---|---|---|---|
+| untouched | 25.5 | 24.9 | 18.8 |
+| `skyline` + mod | 60.4 | **59.0** | 38.6 |
+
+**Sixty at normal play speed.** Fast-forward is capped near 52 by the simulation itself — 19.1 ms
+of CPU per frame before anything is drawn — and this project does not cut the simulation.
 
 Not yet done, in rough order of value:
 
-- **Fold the measured wins into the profiles.** The tiers were built from reasoning about the code
-  and the measurements disagree with that reasoning in places. They should be rebuilt around what
-  was measured, not amended around the edges.
-- **Repeat runs.** Every figure is a single run per configuration, so run-to-run variance is
-  unquantified. The ordering is clear; the exact percentages are not.
-- Per-entity culling of citizens and vehicles, which settings cannot reach. `Cs2Saver` implements
-  it and still has not rendered a frame.
-- Other hardware. Everything measured so far is one machine.
+- **The 1% low.** 33.5 at play speed against a target of 60. The slowest frames stopped being draw
+  cost once the GPU frame dropped under 20 ms; they are simulation now, so no graphics setting
+  reaches them.
+- **Repeat runs.** Most figures are a single run per configuration. Repeats put the average at ±2%
+  and the 1% low at ±10%, which is enough to trust the ordering and not the exact percentages.
+- **Other hardware.** Everything here is one machine. `super-potato` exists for the Celeron target
+  and has never run on one.
+- A licence.
 
 ## Licence
 

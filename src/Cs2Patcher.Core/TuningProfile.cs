@@ -209,8 +209,65 @@ public static class Profiles
         ]);
 
     /// <summary>
+    /// A sharp city that actually runs. The tier this project was aiming at.
+    ///
+    /// <para><c>sharp</c> proved that turning off every screen-space effect in the pipeline is
+    /// not enough: it still cost 32.5ms of GPU because, with geometry left at stock, the frame
+    /// is bound by triangles and draw calls rather than by pixels. Quartering the pixel count
+    /// on that configuration was worth three percent, which is what being triangle-bound looks
+    /// like from the outside.</para>
+    ///
+    /// <para>So this tier gives up the two things that buy geometry back without touching a
+    /// texture or a building's silhouette: the sun's shadows, and the LOD scalar — set here to
+    /// the game's own Low preset value rather than to the floor that makes a city look like
+    /// modelling clay. Buildings keep their meshes and every texture stays at full resolution.
+    /// Measured 42.7 average and 20.3 on the 1% low, against 30.3 and 10.6 for sharp — and
+    /// against 36.8 for potato, which is both slower than this and blurrier, and is kept only
+    /// for machines with no upscaler at all.</para>
+    ///
+    /// <para><b>This tier is where the mod earns its place.</b> The settings above cannot say
+    /// "cut the street furniture but not the buildings" — no setting in the game can. The mod
+    /// can, because prefabs carry their own category. Adding it at Declutter takes the same
+    /// configuration from 42.7 to 51.8 average and from 47.0 to 58.7 at normal play speed,
+    /// which is a fifth of the total performance of this tier arriving from four hundred lines
+    /// of mod. Install it with <c>cs2patch install-mod</c>.</para>
+    /// </summary>
+    public static readonly TuningProfile Skyline = new(
+        "skyline", "Skyline",
+        "Sharp buildings and full-resolution textures; the sun's shadows and the clutter give way "
+        + "instead. Measured +88% on settings alone, +128% with the mod installed.",
+        [
+            .. SharpCity.Tweaks,
+
+            // The single largest lever left once the screen-space effects are gone: it removes
+            // the shadow map pass and every draw call that only existed to cast into it. The
+            // city reads flatter, which is a real loss, but nothing becomes blurry or blocky.
+            // Measured +15% average and +19% on the 1% low over sharp with the mod running.
+            new(Shadows, "enabled", false, Cost.Visible,
+                "No sun shadows. The city reads flatter; nothing gets blurrier or blockier."),
+
+            // The game's own Low preset value, not the 0.10 floor that super-potato uses.
+            // Buildings switch to their cheaper meshes sooner, but they are still their own
+            // meshes rather than the blobs the floor produces.
+            new(Lod, "levelOfDetail", 0.35, Cost.Visible,
+                "The game's own Low preset value. Detail switches sooner; shapes stay theirs.",
+                0.1, 1.0),
+
+            // Only now worth anything. On sharp this was +3%, because the frame was waiting on
+            // triangles; with the geometry cut it is +5% and rising as the rest gets cheaper.
+            // It reduces the resolution the frame is rendered at and reconstructs from motion,
+            // which softens the image without turning textures to mud the way a mip bias does.
+            new(GraphicsRoot, "dlssQuality", "MaximumPerformance", Cost.Visible,
+                "Renders at a lower internal resolution and reconstructs. Softer, never blockier."),
+        ]);
+
+    /// <summary>
     /// For hardware that has no business running this game. Trades looks for frames,
     /// deliberately and visibly.
+    ///
+    /// <para>On a machine with DLSS, <see cref="Skyline"/> now beats this on both counts —
+    /// faster and sharper — so this tier is kept for hardware with no upscaler at all, where
+    /// the mip bias and the terrain cuts are doing work that no amount of reconstruction can.</para>
     /// </summary>
     public static readonly TuningProfile Potato = new(
         "potato", "Potato",
@@ -285,7 +342,8 @@ public static class Profiles
                 "Half resolution per axis — a quarter of the pixels.", 0.5, 1.0),
         ]);
 
-    public static readonly IReadOnlyList<TuningProfile> All = [FreeWins, TrafficSim, SharpCity, Potato, SuperPotato];
+    public static readonly IReadOnlyList<TuningProfile> All =
+        [FreeWins, TrafficSim, SharpCity, Skyline, Potato, SuperPotato];
 
     public static TuningProfile? ById(string id) =>
         All.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));

@@ -365,6 +365,10 @@ Two conclusions, and one non-conclusion.
 The worst 1% of frames sit between 60 and 100 ms, and they are GPU frames — not simulation stalls,
 despite the 1% low only degrading once the simulation starts. More GPU savings will still move it.
 
+> This last paragraph held only as far as `potato` went. Once the GPU frame drops under about
+> 20 ms the tail changes hands entirely — see *The lows change hands as the GPU gets cheaper*
+> below, which was measured later with `cs2patch bench --spikes` and supersedes it.
+
 **The CPU is not the wall.** Render-thread time is 6-9 ms and never exceeds 30 ms in either run.
 `potato` *reduces* CPU-game time as well, because fewer visible objects means less to prepare.
 
@@ -448,10 +452,139 @@ collapse onto a handful of values and small differences vanish.
 Turn vSync off for any run whose numbers are meant to be compared. The benchmark's own timings do
 not have this problem: it records CPU and GPU cost per frame rather than presentation intervals.
 
+## Geometry is sixty percent of a sharp city
+
+`sharp` turns off every screen-space effect the pipeline has — ambient occlusion, reflections,
+global illumination, volumetrics, depth of field, motion blur, volumetric clouds — and still costs
+32.5 ms of GPU. Two measurements say why, and together they say what to do about it.
+
+Forcing the upscaler from its least aggressive setting to its most aggressive one, which is the
+difference between rendering at 1114x627 and at 640x360, was worth **ten percent**. Quartering the
+pixel count buys almost nothing, which is what a triangle-bound frame looks like from outside.
+
+Taking `levelOfDetail` to its floor on the same profile was worth this:
+
+| | avg | 1% low | GPU |
+|---|---|---|---|
+| `sharp` | 30.3 | 10.6 | 32.5 ms |
+| `sharp` + `levelOfDetail=0.1` | 47.8 | 20.4 | 20.4 ms |
+
+**Twelve of the thirty-two milliseconds are geometry.** That is the budget this project spends
+from here on, and the whole problem is that the slider which releases it scales every LOD
+transition at once — buildings included, which is exactly what makes a city look like clay.
+
+## The clutter, not the crowds
+
+Prefabs carry components saying what they are, so the geometry can be taken selectively. Counting
+what the game actually has, logged by the mod on load:
+
+```
+    25 creature prefabs        99 vehicle prefabs
+    20 tree prefabs            52 plant prefabs
+14,291 prop prefabs            12 net-object prefabs
+```
+
+Fourteen thousand prop prefabs — signs, lamps, bins, fences, benches — against twenty kinds of
+tree. The cost was never the crowds, which is why the mod's original premise of culling
+pedestrians and vehicles measured as nothing at all.
+
+Cutting everything except buildings:
+
+| | avg | 1% low | GPU | buildings |
+|---|---|---|---|---|
+| `sharp` | 30.3 | 10.6 | 32.5 ms | untouched |
+| `sharp` + mod at Declutter | 40.3 | 18.1 | 24.5 ms | **untouched** |
+| `sharp` + `levelOfDetail=0.1` | 47.8 | 20.4 | 20.4 ms | cut |
+
+**Eight of the twelve available milliseconds, without touching a building.** No setting in the
+game can express that distinction, and that is the entire justification for shipping a code mod
+alongside a settings patcher.
+
+Isolated on the finished `skyline` configuration, where the settings have already given everything
+they have, the mod is still worth this:
+
+| | avg | 1% low | GPU | at play speed |
+|---|---|---|---|---|
+| `skyline`, settings only | 42.7 | 20.3 | 22.5 ms | 47.0 |
+| `skyline` + mod at Declutter | 51.5 | 22.6 | 18.6 ms | **59.0** |
+
+## The lows change hands as the GPU gets cheaper
+
+`cs2patch bench --spikes` takes the slowest 1% of frames apart. Run across the ladder it shows the
+bottleneck moving:
+
+| | slow-frame GPU | slow-frame CPU-game | CPU was the wall |
+|---|---|---|---|
+| stock settings | 2.2x typical | 2.1x typical | 3 of 21 |
+| super-potato | 2.4x typical | 5.3x typical | 35 of 45 |
+
+At stock the lows are draw cost, and settings reach them. Once the GPU frame is down near 16 ms
+they are CPU-game spikes, and no graphics setting touches those.
+
+The per-phase medians say what those spikes are, and it is not a hitch:
+
+| phase | median CPU-game, super-potato |
+|---|---|
+| paused | 6.5 ms |
+| speed 1 | 9.7 ms |
+| speed 3 | 19.1 ms |
+
+Paused is zero simulation, and each step of speed adds three to four milliseconds. **It is the
+simulation, scaling linearly, exactly as it should.** The apparent "14% of frames are spikes" at
+super-potato was an artefact of comparing three phases against one median.
+
+The consequence is a hard ceiling that no amount of graphics work can move: at speed 3 the CPU
+spends 19.1 ms per frame before a single pixel is drawn, which caps that phase at about 52 fps on
+this CPU. Cutting it would mean cutting the simulation, which this project does not do.
+
+## Sixty is reachable at play speed, and not at 3x
+
+Splitting `skyline` by phase, which is the only honest way to read a benchmark that spends 35 of
+its 90 seconds at triple simulation speed:
+
+| phase | avg | 1% low |
+|---|---|---|
+| paused | 60.4 | 36.1 |
+| speed 1 | **59.0** | 33.5 |
+| speed 3 | 38.6 | 16.3 |
+
+Normal play speed is at sixty. Fast-forward is capped by the simulation, per the section above.
+Quoting a single whole-run average for this benchmark understates ordinary play by about fifteen
+percent and always will.
+
+## Levers that measured as nothing
+
+Recorded because a negative result costs the same to obtain as a positive one and is worth as much
+the second time somebody wonders:
+
+| lever | on | measured |
+|---|---|---|
+| upscaler Balanced to MaximumPerformance | `sharp` (triangle-bound) | +3.7% |
+| upscaler Balanced to MaximumPerformance | `skyline` (geometry cut) | +4.9% |
+| `targetPatchSize` 24 to 64 | `sharp` + mod | +1.7% |
+| `lodCrossFade` off | `sharp` + mod, no shadows | +1.3% |
+| `meshMemoryBudget` 1024 to 4096 | `skyline` | +0.2% |
+| mod culling pedestrians and vehicles | stock settings | +0.9% |
+
+Everything on that list is inside the ±2% error bar on the average. The upscaler rows are the
+interesting pair: the same change is worth more once the frame is no longer waiting on triangles,
+which is the general shape of this whole exercise — **the order the levers are pulled in changes
+what they are worth.**
+
+`meshMemoryBudget` is the one worth a footnote. It did nothing to the average but took the paused
+0.1% low from 25.8 to 40.0, which is consistent with fewer streaming stalls. It is not in any
+profile, because 0.1% of a run is four frames and this project's own rule is to treat that column
+as an outlier detector rather than a result.
+
 ## The honest caveat
 
-The table above is measured on one machine, at one resolution, on one build, with one run per
-configuration — no repeats, so run-to-run variance is unquantified. The relative ordering is large
-enough to be trustworthy; the exact percentages are not. Nothing here has been measured on any
-other hardware, and the goal for this project is 60 stable fps, which none of these configurations
-reaches.
+Everything here is measured on one machine — RTX 3050, Ryzen 5 4600G, 1080p, build 1.6.0f1 — with
+one run per configuration unless stated otherwise. Repeats put the average at ±2% and the 1% low at
+±10%, so the ordering is trustworthy and the exact percentages are not.
+
+Nothing has been measured on any other hardware. The Celeron target in particular is a design
+intent, not a result: `super-potato` exists for it and has never run on one.
+
+The 60 fps goal is met at normal play speed and while paused, and is not met at 3x simulation
+speed, where the ceiling is the simulation itself. The 1% low is 33.5 at play speed against a
+target of 60, and closing that gap is a simulation problem rather than a rendering one.
