@@ -389,9 +389,9 @@ file once, it will report drift even when every value is identical to what the p
 warning is currently more alarming than the situation. Comparing parsed sections rather than raw
 bytes would fix it.
 
-## Why the mod does not load, and what that costs
+## What it takes to make a local mod load
 
-`Cs2Saver.dll` copied into `.cache/Mods/local/Cs2Saver/` is not enough. The game starts, logs
+Copying `Cs2Saver.dll` into `.cache/Mods/local/Cs2Saver/` does nothing. The game starts and logs
 
 ```
 ======= Active Playset =======
@@ -401,26 +401,52 @@ bytes would fix it.
 Mods registered in 8.99ms
 ```
 
-and loads nothing at all.
+having never looked at the folder. Two separate things have to be true, and each fails silently.
 
-The reason is in `ModManager.RegisterMods`, which discovers mods through
-`ExecutableAsset.GetModAssets()` — and that queries `AssetDatabase.global`, not the mod folder.
-The mod roots only reach the asset database through `PdxSdkPlatform`, which needs a Paradox
-session. That session arrives on the command line from the Paradox launcher
-(`pdx-launcher-session-token`, `licensingIpc`, and friends, which the game masks in its own logs).
+**A Paradox session.** `ModManager.RegisterMods` discovers mods through
+`ExecutableAsset.GetModAssets()`, which queries `AssetDatabase.global` rather than the mod folder.
+The mod roots only reach that database through `PdxSdkPlatform`, which needs a session — and the
+session arrives as exactly two command-line arguments the launcher passes:
 
-So the chain is: launcher starts the game → PDX SDK initialises → mod roots register → assets
-index → mods load. Break the first link and every later one fails silently. Launching
-`Cities2.exe` directly — which is what makes unattended benchmarking possible at all — breaks it.
+```
+Cities2.exe --pdx-launcher-session-token <token> --paradox-account-userid <id>
+```
 
-Having the launcher merely *running* does not help; the game connects to it through arguments it
-was given, not by discovery. This was tested rather than assumed.
+That is the whole thing; 139 characters. There is no IPC handle and no hub session despite the
+game masking those names in its own logs. Captured once, the pair can be replayed, which is what
+makes an unattended mod benchmark possible at all. Having the launcher merely *running* does not
+help — the game is handed the session, it does not go looking for one. Tested, not assumed.
 
-The practical consequence: **every settings measurement in this document was taken with zero mods
-loaded**, which is a cleaner comparison than intended and worth knowing. But the mod itself cannot
-be benchmarked the same way. `scripts/Capture-LauncherArgs.ps1` records the launcher's command line
-once so it can be replayed, which reduces the human involvement to a single press of Play rather
-than one per run.
+**An active playset containing the mod.** This is the part that is easy to miss, because a session
+alone is not enough: with a valid session but no active playset the log still reads `(none)` and
+nothing loads, including mods bought from Paradox Mods. The mod must be enabled inside a playset
+that is currently active, and the game requires a restart afterwards — it says `Restart required`
+in `Modding.log` and then carries on running the old set.
+
+A local mod shows **0 KB** in the mod list. That is normal; there is no download size to report.
+
+Once both hold, the log says what it should:
+
+```
+======= Active Playset =======
+	dd (11759876)
+======= Enabled Mods =======
+	 - Cs2Saver v (Cs2Saver)
+Loaded Cs2Saver, Version=1.0.0.0 in 32.2696ms
+```
+
+A worthwhile side effect of all this: **every settings measurement in this document was taken with
+zero mods loaded**, which is a cleaner comparison than was intended.
+
+## The mod's own frame log is quantised by vSync
+
+`FrameLogSystem` writes plausible-looking percentiles that are not as precise as they appear. On a
+240 Hz display with vSync on, every recorded frame time lands on a multiple of the refresh
+interval — 12.50, 25.00, 33.34, 50.01, 100.02 ms are all multiples of 4.167 — so p50 and p95
+collapse onto a handful of values and small differences vanish.
+
+Turn vSync off for any run whose numbers are meant to be compared. The benchmark's own timings do
+not have this problem: it records CPU and GPU cost per frame rather than presentation intervals.
 
 ## The honest caveat
 
