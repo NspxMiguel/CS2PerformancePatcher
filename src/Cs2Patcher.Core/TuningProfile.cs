@@ -166,6 +166,49 @@ public static class Profiles
         ]);
 
     /// <summary>
+    /// Everything that is not the city itself.
+    ///
+    /// The other aggressive tiers buy their frames by making the city cheaper to look at —
+    /// lower-detail meshes, blurrier textures. This one refuses to touch either. It removes the
+    /// fixed per-frame costs instead: the screen-space effects, the volumetrics, half the shadow
+    /// map, the expensive shader variants. Buildings, roads and vehicles keep every triangle and
+    /// every texel they started with.
+    ///
+    /// Measured at +47% average and +14% on the 1% low, against +114% for super-potato. That gap
+    /// is the price of a sharp city, and it is the honest reason this tier exists rather than
+    /// being the default: it costs real frames to look right.
+    /// </summary>
+    public static readonly TuningProfile SharpCity = new(
+        "sharp", "Sharp City",
+        "Cuts everything except the city. Geometry and textures untouched. Measured +47% average.",
+        [
+            .. TrafficSim.Tweaks,
+
+            // Cheaper shader variants. Changes shading, not shapes or textures.
+            new(Extra, "shaderQualityTier", "Low", Cost.Cheap,
+                "Switches to the game's COLOSSAL_QUALITY_TIER_LOW shader variants."),
+            new(Extra, "cascadeShadowSplitCount", 0, Cost.Cheap,
+                "No cascade splits. Shadows remain; the sun stops being rasterised four times.", 0, 4),
+
+            // Screen-space effects are full passes over a strategy view that rarely shows them off.
+            new(Ssao, "enabled", false, Cost.Cheap, "No ambient occlusion."),
+            new(Ssr, "enabled", false, Cost.Cheap, "No screen-space reflections."),
+            new(Volumetrics, "enabled", false, Cost.Cheap, "No volumetric fog."),
+            new(Clouds, "volumetricCloudsEnabled", false, Cost.Cheap, "Flat clouds instead of volumetric."),
+
+            new(Shadows, "directionalShadowResolution", 1024, Cost.Cheap, "Sun shadow map resolution."),
+            new(Shadows, "terrainCastShadows", false, Cost.Cheap, "Terrain stops casting shadows."),
+            new(Lod, "maxLightCount", 1024, Cost.Cheap, "Concurrent light cap, from 4096.", 512, 16384),
+
+            // Balanced rather than UltraPerformance on purpose. With geometry left at stock this
+            // configuration is limited by triangles, not pixels — the most aggressive upscaler
+            // measured only ten percent above the least aggressive one, so there is nothing to
+            // buy by making the image worse.
+            new(GraphicsRoot, "dlssQuality", "Balanced", Cost.Cheap,
+                "Forces DLSS past the level the game picks for itself. Ignored on cards without it."),
+        ]);
+
+    /// <summary>
     /// For hardware that has no business running this game. Trades looks for frames,
     /// deliberately and visibly.
     /// </summary>
@@ -236,7 +279,7 @@ public static class Profiles
                 "Half resolution per axis — a quarter of the pixels.", 0.5, 1.0),
         ]);
 
-    public static readonly IReadOnlyList<TuningProfile> All = [FreeWins, TrafficSim, Potato, SuperPotato];
+    public static readonly IReadOnlyList<TuningProfile> All = [FreeWins, TrafficSim, SharpCity, Potato, SuperPotato];
 
     public static TuningProfile? ById(string id) =>
         All.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));

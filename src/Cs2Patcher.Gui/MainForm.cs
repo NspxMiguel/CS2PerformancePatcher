@@ -17,6 +17,7 @@ public sealed class MainForm : Form
     private readonly Label _profileDescription = new();
     private readonly Button _applyButton = new();
     private readonly Button _revertButton = new();
+    private readonly Button _tunePcButton = new();
     private readonly TextBox _log = new();
 
     private GameLocator.GameInstall _install = null!;
@@ -137,11 +138,66 @@ public sealed class MainForm : Form
         _revertButton.Height = 34;
         _revertButton.Click += (_, _) => DoRevert();
 
+        _tunePcButton.Text = "Check my PC";
+        _tunePcButton.Width = 130;
+        _tunePcButton.Height = 34;
+        _tunePcButton.Click += (_, _) => DoTunePc();
+
         var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, Padding = new Padding(0, 0, 0, 8) };
         flow.Controls.Add(_applyButton);
         flow.Controls.Add(_revertButton);
+        flow.Controls.Add(_tunePcButton);
 
         return new Panel { Dock = DockStyle.Top, AutoSize = true, Controls = { flow } };
+    }
+
+    /// <summary>
+    /// Reports what outside the game is costing frames, and offers to change only the parts
+    /// that can be put back. Anything needing a BIOS, a reboot or administrator rights is
+    /// explained and left alone.
+    /// </summary>
+    private void DoTunePc()
+    {
+        var exe = _install.InstallDir is null ? null : Path.Combine(_install.InstallDir, "Cities2.exe");
+        var findings = HostTuning.Inspect(File.Exists(exe) ? exe : null);
+
+        var report = new List<string>();
+        foreach (var f in findings)
+        {
+            var mark = f.Severity switch
+            {
+                Severity.Ok => "ok",
+                Severity.Actionable => "FIX",
+                _ => "note",
+            };
+            report.Add($"[{mark}] {f.Name}: {f.Current}");
+            if (f.Severity != Severity.Ok) report.Add($"       wanted: {f.Wanted}");
+            report.Add($"       {f.Why}");
+            report.Add("");
+        }
+
+        WriteLog("Outside the game", report, []);
+
+        var fixable = findings.Where(f => f.Severity == Severity.Actionable).ToList();
+        if (fixable.Count == 0)
+        {
+            SetStatus("Nothing outside the game this tool can change.", Color.ForestGreen);
+            return;
+        }
+
+        var answer = MessageBox.Show(
+            $"{fixable.Count} of these can be changed from here:\r\n\r\n"
+            + string.Join("\r\n", fixable.Select(f => $"  - {f.Name}: {f.Current} -> {f.Wanted}"))
+            + "\r\n\r\nEach one is recorded so it can be put back. Change them?",
+            "Check my PC", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+        if (answer != DialogResult.Yes) return;
+
+        var state = HostTuning.StateFile(_install.UserDataDir!);
+        var applied = HostTuning.Apply(findings, state);
+
+        WriteLog("Outside the game", [.. applied.Select(l => $"changed: {l}"), "", "Put these back with:  cs2patch tune-pc --revert"], []);
+        SetStatus($"Changed {applied.Count} outside the game.", Color.ForestGreen);
     }
 
     private GroupBox BuildLogGroup()

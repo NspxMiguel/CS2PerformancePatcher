@@ -260,6 +260,33 @@ The DLSS one is the clearest example of what this whole tool is for. `ApplyDLSSA
 the upscaler quality purely from pixel count: at 1080p, `num >= 2073600 && num <= 3686400` always
 lands on `MaximumQuality`, and no menu goes further. The hardware will.
 
+### `levelOfDetail` has no useful middle
+
+Swept on top of `traffic`, so geometry is the only thing changing and the city keeps its stock
+textures, shadows and shaders:
+
+| `levelOfDetail` | avg fps | 1% low |
+|---|---|---|
+| 0.5 (stock) | 24.1 | 10.8 |
+| 0.4 | 25.6 | 8.0 |
+| 0.3 | 28.1 | 9.7 |
+| 0.2 | 27.2 | 6.1 |
+| 0.15 | 33.1 | 14.2 |
+
+The average creeps up and the 1% low gets *worse* until the value goes well below 0.2, at which
+point both improve sharply. Between 0.2 and 0.4 there is nothing worth having: a few frames of
+average, bought with a worse floor. Pulling LOD transitions closer appears to cost more in
+streaming churn than it saves in triangles, right up until the transitions are close enough that
+most of the city is drawing its cheap mesh.
+
+**The levers are not independent, and the order matters.** The same knob measured on top of
+`potato` — where the shader tier, post-processing and shadow resolution have already been cut —
+was worth +87% average and +78% on the 1% low. On top of `traffic` it is worth +46% and +35%.
+Geometry only pays once the fixed per-frame costs are out of the way.
+
+The practical consequence for anyone tuning by hand: setting `levelOfDetail` to "something in the
+middle" as a compromise is the one choice that gets neither the frames nor the picture.
+
 ### Two things that did not work
 
 **More aggressive is not monotonically better.** Adding `mipbias=3` and a 4096 MB mesh budget on
