@@ -58,6 +58,15 @@ function Save-Screen([string]$path) {
 
 Add-Type -AssemblyName System.Windows.Forms
 
+# Log lines start "[2026-09-04 18:09:14,123] [INFO] ...". Anything unparseable is treated as
+# ancient, so a format change makes this wait rather than fire on the wrong run.
+function LineTime([string]$line) {
+    if ($line -match '^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})') {
+        try { return [datetime]::ParseExact($matches[1], 'yyyy-MM-dd HH:mm:ss', $null) } catch { }
+    }
+    return [datetime]::MinValue
+}
+
 # Only lines written from here on count. The log is not truncated between runs, so an earlier
 # run's "Loading completed" would otherwise fire this immediately.
 $startedAt = Get-Date
@@ -72,10 +81,17 @@ while ((Get-Date) -lt $deadline) {
 
     # "Starting game from 'Benchmark ...'" then "Loading completed" is the pair that means the
     # camera path is about to run.
-    $lines = Get-Content $sceneLog -Tail 40 -ErrorAction SilentlyContinue
+    #
+    # The log is not truncated between runs, so the previous run's pair is still sitting in the
+    # tail. Without checking the timestamp this fires instantly and photographs whatever was on
+    # screen before the game had even loaded.
+    $lines = Get-Content $sceneLog -Tail 60 -ErrorAction SilentlyContinue
     $startIndex = -1
     for ($i = $lines.Count - 1; $i -ge 0; $i--) {
-        if ($lines[$i] -match "Starting game from 'Benchmark") { $startIndex = $i; break }
+        if ($lines[$i] -match "Starting game from 'Benchmark" -and (LineTime $lines[$i]) -gt $startedAt) {
+            $startIndex = $i
+            break
+        }
     }
     if ($startIndex -lt 0) { continue }
 
