@@ -49,6 +49,14 @@ namespace Cs2Saver
         [SettingsUISection(MainSection, RenderingGroup)]
         public BudgetPreset Preset { get; set; } = BudgetPreset.Off;
 
+        /// <summary>
+        /// The look put on top of the city. Costs nothing to render — it drives the grading stack
+        /// HDRP already runs — and exists because a city with its shadows and effects cut reads as
+        /// broken rather than as stylised unless something puts an intention back on it.
+        /// </summary>
+        [SettingsUISection(MainSection, RenderingGroup)]
+        public Look CityLook { get; set; } = Look.Off;
+
         /// <summary>Records frame timing to a CSV so a preset can be judged by numbers.</summary>
         [SettingsUISection(MainSection, MeasurementGroup)]
         public bool RecordFrameTimings { get; set; }
@@ -63,6 +71,7 @@ namespace Cs2Saver
         public override void SetDefaults()
         {
             Preset = BudgetPreset.Off;
+            CityLook = Look.Off;
             RecordFrameTimings = false;
             RunLabel = "baseline";
         }
@@ -89,6 +98,8 @@ namespace Cs2Saver
             // the only one of the two that can reach trees and props, which have no live
             // per-frame equivalent worth sweeping.
             if (Mod.PrefabFloor != null) Mod.PrefabFloor.Budget = budget;
+
+            if (Mod.CityLook != null) Mod.CityLook.Look = CityLook;
 
             if (Mod.FrameLog != null)
             {

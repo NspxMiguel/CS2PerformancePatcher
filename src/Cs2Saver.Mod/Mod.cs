@@ -24,6 +24,7 @@ namespace Cs2Saver
         internal static RenderBudgetSystem BudgetSystem;
         internal static PrefabLodFloorSystem PrefabFloor;
         internal static FrameLogSystem FrameLog;
+        internal static CityLookSystem CityLook;
         internal static Settings Setting;
 
         public void OnLoad(UpdateSystem updateSystem)
@@ -56,6 +57,16 @@ namespace Cs2Saver
                     SystemUpdatePhase.PrefabUpdate);
                 PrefabFloor = updateSystem.World.GetOrCreateSystemManaged<PrefabLodFloorSystem>();
                 PrefabFloor.Budget = RenderBudget.Off;
+            });
+
+            TryRegister("city look", () =>
+            {
+                // PostSimulation rather than a rendering phase on purpose: this touches a
+                // GameObject and a Volume, not ECS data, so it only needs to run somewhere
+                // ordinary once per frame and do nothing on almost all of them.
+                updateSystem.UpdateAt<CityLookSystem>(SystemUpdatePhase.PostSimulation);
+                CityLook = updateSystem.World.GetOrCreateSystemManaged<CityLookSystem>();
+                CityLook.Look = Look.Off;
             });
 
             TryRegister("frame log", () =>
@@ -103,6 +114,10 @@ namespace Cs2Saver
                 // Now that the original value of every prefab is remembered, setting the budget
                 // to Off actually puts the city back rather than leaving it cut until restart.
                 if (PrefabFloor != null) PrefabFloor.Budget = RenderBudget.Off;
+
+                // Same reason: the volume must go, or the city keeps this mod's colour grading
+                // after the mod itself is gone.
+                if (CityLook != null) CityLook.Look = Look.Off;
 
                 if (FrameLog != null) FrameLog.Recording = false;
             }

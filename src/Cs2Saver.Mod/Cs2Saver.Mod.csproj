@@ -32,7 +32,9 @@
                         Unity.Collections;
                         Unity.Mathematics;
                         Unity.Burst;
-                        UnityEngine.CoreModule">
+                        UnityEngine.CoreModule;
+                        Unity.RenderPipelines.Core.Runtime;
+                        Unity.RenderPipelines.HighDefinition.Runtime">
       <HintPath>$(GameManagedDir)\%(Identity).dll</HintPath>
       <!-- Never ship the game's own assemblies alongside the mod. -->
       <Private>false</Private>

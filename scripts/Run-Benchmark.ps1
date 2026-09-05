@@ -48,6 +48,10 @@ param(
     [ValidateSet('Off', 'Balanced', 'TrafficFocus', 'Aggressive', 'Declutter', 'DeclutterMax', 'TreesOnly', 'PropsOnly')]
     [string]$ModPreset,
 
+    # Cs2Saver colour grading preset. Same mechanism as -ModPreset.
+    [ValidateSet('Off', 'Vivid', 'Toybox', 'Miniature', 'Cel')]
+    [string]$ModLook,
+
     # How long to wait for the result before giving up. A run is 90s plus loading.
     [int]$TimeoutSec = 420,
 
@@ -192,33 +196,36 @@ if (Test-Path $result) { Remove-Item $result -Force }
 # arrives if something else ends up spawning the process.
 Set-Content -Path (Join-Path $userData 'runOnce.txt') -Value '--benchmark' -Encoding ascii -NoNewline
 
-if ($ModPreset) {
+function Set-ModSetting([string]$Key, [string]$Value) {
     # The mod's own settings file, same section-plus-JSON shape as everything else the game
     # writes. Rewriting it beats driving the options page, and the mod reads it at load.
     $modSettings = Join-Path $userData 'Cs2Saver.coc'
     if (-not (Test-Path $modSettings)) {
-        throw "Cs2Saver.coc does not exist yet. The mod has to load once before its preset can be set."
+        throw "Cs2Saver.coc does not exist yet. The mod has to load once before $Key can be set."
     }
 
     $text = Get-Content $modSettings -Raw
 
-    if ($text -match '"Preset"\s*:\s*"[^"]*"') {
-        $updated = $text -replace '("Preset"\s*:\s*")[^"]*(")', "`${1}$ModPreset`${2}"
+    if ($text -match "`"$Key`"\s*:\s*`"[^`"]*`"") {
+        $updated = $text -replace "(`"$Key`"\s*:\s*`")[^`"]*(`")", "`${1}$Value`${2}"
     }
     else {
         # The game drops any setting that equals its default when it writes these files, and
-        # Off is the mod's default -- so after one Off run the key is simply not there any
-        # more. Put it back rather than failing on its absence.
-        $updated = $text -replace '(\{\s*\r?\n)', "`${1}    `"Preset`": `"$ModPreset`",`r`n"
+        # Off is the default for both of these -- so after one Off run the key is simply not
+        # there any more. Put it back rather than failing on its absence.
+        $updated = $text -replace '(\{\s*\r?\n)', "`${1}    `"$Key`": `"$Value`",`r`n"
     }
 
-    if ($updated -notmatch "`"Preset`"\s*:\s*`"$ModPreset`"") {
-        throw "Could not set Preset to '$ModPreset' in Cs2Saver.coc. Its shape has changed."
+    if ($updated -notmatch "`"$Key`"\s*:\s*`"$Value`"") {
+        throw "Could not set $Key to '$Value' in Cs2Saver.coc. Its shape has changed."
     }
 
     Set-Content -Path $modSettings -Value $updated -Encoding utf8 -NoNewline
-    Write-Host "  mod preset '$ModPreset'"
+    Write-Host "  mod $Key '$Value'"
 }
+
+if ($ModPreset) { Set-ModSetting 'Preset' $ModPreset }
+if ($ModLook) { Set-ModSetting 'CityLook' $ModLook }
 
 # Mods only load when the game has a Paradox session, which arrives on the command line from
 # the launcher. Replaying a captured one is what makes the mod benchmarkable unattended;

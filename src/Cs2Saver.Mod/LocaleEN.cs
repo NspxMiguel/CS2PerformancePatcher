@@ -71,6 +71,22 @@ namespace Cs2Saver
                 },
 
                 {
+                    m_Settings.GetOptionLabelLocaleID(nameof(Settings.CityLook)),
+                    "Give the city a look"
+                },
+                {
+                    m_Settings.GetOptionDescLocaleID(nameof(Settings.CityLook)),
+                    "Colour, contrast and tone. Costs nothing to render, and exists because a " +
+                    "city with its shadows and effects turned off looks broken rather than " +
+                    "stylised until something puts an intention back on it."
+                },
+                { m_Settings.GetEnumValueLocaleID(Look.Off), "Off — the game's own colours" },
+                { m_Settings.GetEnumValueLocaleID(Look.Vivid), "Vivid — colour put back, nothing else" },
+                { m_Settings.GetEnumValueLocaleID(Look.Toybox), "Toybox — cartoon: strong colour, warm sun, cool shade" },
+                { m_Settings.GetEnumValueLocaleID(Look.Miniature), "Miniature — model railway under a lamp" },
+                { m_Settings.GetEnumValueLocaleID(Look.Cel), "Cel — flat bands of light, the drawn look" },
+
+                {
                     m_Settings.GetOptionLabelLocaleID(nameof(Settings.RecordFrameTimings)),
                     "Record frame timings to a file"
                 },
