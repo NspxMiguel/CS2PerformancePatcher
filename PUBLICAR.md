@@ -4,14 +4,14 @@ Cole a mensagem abaixo, inteira, no Claude Code do seu PC principal — aquele q
 GitHub. Não é para rodar nada na máquina de testes.
 
 **Antes de colar:** copie a pasta `C:\Users\miguel\CS2PerformancePatcher` para o PC principal, ou
-clone-a de lá. A pasta tem 40 arquivos rastreados e 1,1 MB de histórico; a subpasta `.research/`
+clone-a de lá. A pasta tem 46 arquivos rastreados; a subpasta `.research/`
 é grande e **não deve ir junto** — ela está no `.gitignore` justamente por isso.
 
 ---
 
 ## Copie a partir daqui
 
-Tenho um repositório git local pronto para publicar, em `CS2PerformancePatcher`. São 42 commits na
+Tenho um repositório git local pronto para publicar, em `CS2PerformancePatcher`. São 49 commits na
 branch `main`, sem remote configurado. Quero publicá-lo no GitHub como repositório **público**.
 
 Antes de qualquer coisa, confira três coisas e me diga o resultado:
@@ -19,8 +19,8 @@ Antes de qualquer coisa, confira três coisas e me diga o resultado:
 1. `git ls-files | grep -i '\.research'` tem de vir **vazio**. Essa pasta contém código
    decompilado da Paradox e um token de sessão capturado; nada dali pode ser publicado. Se
    aparecer qualquer coisa, pare e me avise.
-2. `git log --oneline | wc -l` deve dar 42 e `git status` deve estar limpo.
-3. `git ls-files | wc -l` deve dar 40.
+2. `git log --oneline | wc -l` deve dar 49 e `git status` deve estar limpo.
+3. `git ls-files | wc -l` deve dar 46.
 
 Depois:
 
@@ -59,3 +59,12 @@ Quando terminar, me passe a URL.
   velocidade normal, contra os 8,33 ms que 120 fps exigem. Medido por três caminhos diferentes.
 - **Outro hardware.** Tudo foi medido em um computador só. O `super-potato` e os tiers abaixo dele
   existem para máquinas fracas e **nunca rodaram em uma**.
+- **O antialiasing do jogo está desligado** e nenhum perfil deste projeto toca nisso. O bloco
+  `AntiAliasingQualitySettings` do `Settings.coc` fica inteiro no padrão, e o padrão em C# é
+  `antiAliasingMethod = None`. Descoberto no fim da sessão de 5 de setembro e não medido: pode ser
+  que o DLSS já resolva (num corte 1:1 o `handsome` está *borrado*, não serrilhado), pode ser que
+  um SMAA barato ajude. Ninguém testou.
+- **O entardecer.** A cidade ao entardecer continua menos dramática que a do jogo original. A causa
+  foi encontrada — a tonalidade fria das sombras domina um quadro que é quase todo sombra — e
+  metade dela foi corrigida. O conserto certo é a coloração saber a hora do dia, o que o mod
+  consegue fazer (`PlanetarySystem.time`) e ainda não faz.
