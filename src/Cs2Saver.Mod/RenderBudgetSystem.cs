@@ -31,8 +31,20 @@ namespace Cs2Saver
         private EntityQuery m_VehicleQuery;
         private ComponentTypeHandle<CullingInfo> m_CullingInfoType;
 
+        private RenderBudget m_Budget = RenderBudget.Off;
+        private bool m_Dirty = true;
+
         /// <summary>Live configuration. Assign from the mod's settings; takes effect next frame.</summary>
-        public RenderBudget Budget { get; set; } = RenderBudget.Off;
+        public RenderBudget Budget
+        {
+            get => m_Budget;
+            set
+            {
+                if (value.Citizens == m_Budget.Citizens && value.Vehicles == m_Budget.Vehicles) return;
+                m_Budget = value;
+                m_Dirty = true;
+            }
+        }
 
         protected override void OnCreate()
         {
@@ -54,7 +66,20 @@ namespace Cs2Saver
 
         protected override void OnUpdate()
         {
-            var budget = Budget;
+            // Sweeping every pedestrian and vehicle each frame was measured costing 5ms of CPU
+            // to save under 1ms of GPU — a net loss large enough to erase the whole point.
+            //
+            // It is also unnecessary. The game refills CullingInfo.m_MinLod from
+            // ObjectGeometryData.m_MinLod whenever it rebuilds an entity, and
+            // PrefabLodFloorSystem has already raised the floor on the prefab, so anything
+            // spawned or refreshed from here on inherits it for free. The only entities this
+            // pass exists for are the ones already alive when the budget changed, and one
+            // sweep catches all of them.
+            if (!m_Dirty) return;
+
+            var budget = m_Budget;
+            m_Dirty = false;
+
             if (budget.Citizens == 0 && budget.Vehicles == 0) return;
 
             m_CullingInfoType.Update(this);
