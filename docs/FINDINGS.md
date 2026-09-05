@@ -213,8 +213,8 @@ Three things make it usable unattended:
 
 ## What the profiles actually buy
 
-RTX 3050 8GB, Ryzen 5 4600G, 1080p, game build 1.6.0f1. Baseline is the game's own auto-detected
-Medium. Frame cost is whichever of CPU and GPU finished last, per frame.
+RTX 3050 8GB, Ryzen 5 4600G, 1080p, game build 1.6.0f1, no mods loaded. Baseline is the game's own
+auto-detected Medium. Frame cost is whichever of CPU and GPU finished last, per frame.
 
 | run | avg fps | 1% low | GPU ms | render ms | GPU-bound |
 |---|---|---|---|---|---|
@@ -222,20 +222,62 @@ Medium. Frame cost is whichever of CPU and GPU finished last, per frame.
 | free | 23.7 | 10.7 | 41.9 | 8.2 | 96% |
 | traffic | 24.1 | 10.8 | 41.0 | 8.1 | 94% |
 | potato | 36.8 | 10.3 | 26.6 | 6.2 | 88% |
+| super-potato | 47.4 / 48.5 / 48.6 | 16.5 / 18.7 / 20.2 | ~19.3 | 4.9 | 71% |
 
-Read that carefully, because the headline is not the story.
+### How much of that is noise
 
-**`free` and `traffic` are worth about 5-6%.** The fourteen changes that separate them buy one
-percentage point. Shadow-caster thresholds, cascade count, SSR steps, SSAO steps, volumetrics
-budget — the whole cheap tier — is nearly free performance, but it is also nearly no performance.
+Three runs of `super-potato`, identical settings, back to back: the average landed within 1.3% of
+itself every time; the 1% low ranged from 16.5 to 20.2, a spread of 22%.
 
-**`potato` is worth 62% on the average**, and it gets there on the two settings the cheap tier
-refuses to touch: `levelOfDetail` at 0.2 and `shaderQualityTier` at Low. Cutting what is *drawn*
-works; cutting what is *post-processed* barely registers.
+So **the average is trustworthy to about ±2%, and the 1% low to about ±10%.** Everything below is
+read against that. A change worth five percent on the 1% low cannot be distinguished from doing
+nothing, and this document does not pretend otherwise.
 
-**No profile moves the 1% low at all.** It sits at 10.3-10.8 fps in every configuration including
-the untouched baseline. That is the number that decides whether the game feels smooth, and settings
-do not currently touch it.
+### What actually earns its place
+
+**`free` and `traffic` are worth 5-6%, which is inside nothing.** The fourteen changes separating
+them buy one percentage point. Shadow-caster thresholds, cascade count, SSR steps, SSAO steps,
+volumetrics budget — the whole cheap tier — is nearly free performance and also nearly no
+performance.
+
+**`potato` is worth 62%**, and it earns that on the two settings the cheap tier refuses to touch:
+`levelOfDetail` at 0.2 and `shaderQualityTier` at Low. Cutting what is *drawn* works. Cutting what
+is *post-processed* does not register.
+
+Measured one at a time on top of `potato`, three settings carry nearly everything, and none of them
+was in a profile:
+
+| change | avg fps | 1% low |
+|---|---|---|
+| `levelOfDetail` 0.2 → 0.1 | 42.5 (+87% vs baseline) | 18.7 (+78%) |
+| `dlssQuality` → UltraPerformance | 42.1 (+86%) | 13.9 (+33%) |
+| `cascadeShadowSplitCount` 1 → 0 | 37.0 (+63%) | 13.1 (+25%) |
+
+They attack different things — geometry, pixels, shadow rasterisation — so they compound rather
+than overlap. Together they are `super-potato`.
+
+The DLSS one is the clearest example of what this whole tool is for. `ApplyDLSSAutoSettings` picks
+the upscaler quality purely from pixel count: at 1080p, `num >= 2073600 && num <= 3686400` always
+lands on `MaximumQuality`, and no menu goes further. The hardware will.
+
+### Two things that did not work
+
+**More aggressive is not monotonically better.** Adding `mipbias=3` and a 4096 MB mesh budget on
+top of `super-potato` produced 43.7 average against 48.6, and dropped the 1% low to 9.7 — below the
+untouched baseline. On a PCIe 3.0 x8 link, over-committing mesh memory costs more than the smaller
+textures save. The existing budget heuristic was right.
+
+**Upscaling alone cannot save a sharp city.** `traffic` plus DLSS UltraPerformance reached 26.1,
+while `potato` plus the same DLSS setting reached 42.1. The machine is limited by geometry before
+it is limited by pixels, so a profile that keeps every LOD at stock gets little from an upscaler.
+Anything that wants both the frames and a sharp city has to cut geometry *selectively* — which
+settings cannot express, and which is exactly what the code mod is for.
+
+### The 1% low, and where it stops moving
+
+No settings profile moved the 1% low until `super-potato`. It sat at 10.3-10.8 in `baseline`,
+`free`, `traffic` and `potato` alike — the number that decides whether the game feels smooth, flat
+across a 62% swing in the average.
 
 Split by phase, `potato` shows why:
 
@@ -275,6 +317,39 @@ single 642 ms frame is almost certainly the shader-variant compile triggered by
 `Shader.EnableKeyword("COLOSSAL_QUALITY_TIER_LOW")` — a one-time cost that lands inside the
 measurement window. Quote the 1% low, which is 32 frames; treat the 0.1% column as an outlier
 detector rather than a result.
+
+## Why the mod does not load, and what that costs
+
+`Cs2Saver.dll` copied into `.cache/Mods/local/Cs2Saver/` is not enough. The game starts, logs
+
+```
+======= Active Playset =======
+	(none)
+======= Enabled Mods =======
+	(none)
+Mods registered in 8.99ms
+```
+
+and loads nothing at all.
+
+The reason is in `ModManager.RegisterMods`, which discovers mods through
+`ExecutableAsset.GetModAssets()` — and that queries `AssetDatabase.global`, not the mod folder.
+The mod roots only reach the asset database through `PdxSdkPlatform`, which needs a Paradox
+session. That session arrives on the command line from the Paradox launcher
+(`pdx-launcher-session-token`, `licensingIpc`, and friends, which the game masks in its own logs).
+
+So the chain is: launcher starts the game → PDX SDK initialises → mod roots register → assets
+index → mods load. Break the first link and every later one fails silently. Launching
+`Cities2.exe` directly — which is what makes unattended benchmarking possible at all — breaks it.
+
+Having the launcher merely *running* does not help; the game connects to it through arguments it
+was given, not by discovery. This was tested rather than assumed.
+
+The practical consequence: **every settings measurement in this document was taken with zero mods
+loaded**, which is a cleaner comparison than intended and worth knowing. But the mod itself cannot
+be benchmarked the same way. `scripts/Capture-LauncherArgs.ps1` records the launcher's command line
+once so it can be replayed, which reduces the human involvement to a single press of Play rather
+than one per run.
 
 ## The honest caveat
 

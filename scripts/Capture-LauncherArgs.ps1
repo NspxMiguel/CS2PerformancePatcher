@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Mods do not load unless the Paradox launcher starts the game. Launching Cities2.exe
-    directly gets no PDX session, so `Active Playset: (none)` and nothing is loaded — which
+    directly gets no PDX session, so `Active Playset: (none)` and nothing is loaded -- which
     makes the mod impossible to benchmark unattended.
 
     The launcher passes the session through on the command line. Capture it once and the
