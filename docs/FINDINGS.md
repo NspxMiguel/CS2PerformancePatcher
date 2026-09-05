@@ -189,18 +189,97 @@ demonstrably cosmetic.
 
 ## Measurement
 
-`FrameLogSystem` in the mod writes a CSV to `Cs2Saver/frames-*.csv` under the game's persistent
-data folder: frames, average FPS, p50/p95/p99 frame time, and 1% / 0.1% low FPS, in ten-second
-windows, tagged with a free-text label.
+The game ships its own benchmark, and it is a better bench than playing by hand: a fixed camera
+path over a city bundled with the game, 90 seconds every time — 20s paused, 35s at speed 1, 35s at
+speed 3. Two runs therefore differ only by what was changed between them.
 
-The lows are recorded as first-class columns on purpose. An average can improve while the
-experience gets worse — a build that gains five average FPS but loses twelve off its 1% low
-feels worse to play, and only the percentiles show that.
+It records the CPU-game, CPU-render and GPU cost of *every individual frame* and writes the lot to
+`Benchmark.coc` beside `Settings.coc`, in the same section-plus-JSON format. That is what makes real
+lows computable after the fact rather than estimated.
+
+Three things make it usable unattended:
+
+- **`--benchmark`** on the command line runs it straight from startup (`GameManager.Configuration`).
+  The game also merges anything in `<user data>/runOnce.txt` into its command line and then deletes
+  the file, so the flag can be armed without controlling how the process gets spawned.
+- **`steam_appid.txt`** containing `949230` must sit next to `Cities2.exe` to launch it directly.
+  Without it the Steam platform service fails to initialise and the asset database dies with a null
+  reference in `PopulateFromDataSource` before the menu — the failure looks nothing like its cause.
+- **The window has to be in the foreground.** Backgrounded, rendering is throttled and textures do
+  not stream, so the run completes and writes a plausible-looking result that measures nothing.
+
+`scripts/Run-Benchmark.ps1` handles all three and files each result as `Benchmark.<label>.coc`;
+`cs2patch bench` reads them back and prints the comparison.
+
+## What the profiles actually buy
+
+RTX 3050 8GB, Ryzen 5 4600G, 1080p, game build 1.6.0f1. Baseline is the game's own auto-detected
+Medium. Frame cost is whichever of CPU and GPU finished last, per frame.
+
+| run | avg fps | 1% low | GPU ms | render ms | GPU-bound |
+|---|---|---|---|---|---|
+| baseline | 22.7 | 10.5 | 43.8 | 9.1 | 97% |
+| free | 23.7 | 10.7 | 41.9 | 8.2 | 96% |
+| traffic | 24.1 | 10.8 | 41.0 | 8.1 | 94% |
+| potato | 36.8 | 10.3 | 26.6 | 6.2 | 88% |
+
+Read that carefully, because the headline is not the story.
+
+**`free` and `traffic` are worth about 5-6%.** The fourteen changes that separate them buy one
+percentage point. Shadow-caster thresholds, cascade count, SSR steps, SSAO steps, volumetrics
+budget — the whole cheap tier — is nearly free performance, but it is also nearly no performance.
+
+**`potato` is worth 62% on the average**, and it gets there on the two settings the cheap tier
+refuses to touch: `levelOfDetail` at 0.2 and `shaderQualityTier` at Low. Cutting what is *drawn*
+works; cutting what is *post-processed* barely registers.
+
+**No profile moves the 1% low at all.** It sits at 10.3-10.8 fps in every configuration including
+the untouched baseline. That is the number that decides whether the game feels smooth, and settings
+do not currently touch it.
+
+Split by phase, `potato` shows why:
+
+| phase | avg fps | 1% low |
+|---|---|---|
+| paused | 44.2 | 25.8 |
+| speed 1 | 41.3 | 11.0 |
+| speed 3 | 27.9 | 10.9 |
+
+With the camera parked and the simulation stopped — rendering alone — it manages 44 fps with a 26
+fps floor. Start the simulation and the floor falls to 11 and stays there.
+
+## Where the frames are lost, by the numbers
+
+Frame-time distributions, same two runs:
+
+| | baseline | potato |
+|---|---|---|
+| GPU average | 43.8 ms | 26.6 ms |
+| GPU frames over 33 ms | 1660 of 2001 | 560 of 3165 |
+| GPU worst frame | 103 ms | 642 ms |
+| CPU-game average | 17.3 ms | 13.6 ms |
+| CPU-render average | 9.1 ms | 6.2 ms |
+
+Two conclusions, and one non-conclusion.
+
+**The average is GPU-bound and the tail is too.** `potato`'s 99th-percentile GPU frame is 60 ms.
+The worst 1% of frames sit between 60 and 100 ms, and they are GPU frames — not simulation stalls,
+despite the 1% low only degrading once the simulation starts. More GPU savings will still move it.
+
+**The CPU is not the wall.** Render-thread time is 6-9 ms and never exceeds 30 ms in either run.
+`potato` *reduces* CPU-game time as well, because fewer visible objects means less to prepare.
+
+**The 0.1% low is not a real regression.** It appears to collapse by half under `potato`, but 0.1%
+of 3165 frames is four frames, and both runs contain exactly three frames over 100 ms. `potato`'s
+single 642 ms frame is almost certainly the shader-variant compile triggered by
+`Shader.EnableKeyword("COLOSSAL_QUALITY_TIER_LOW")` — a one-time cost that lands inside the
+measurement window. Quote the 1% low, which is 32 frames; treat the 0.1% column as an outlier
+detector rather than a result.
 
 ## The honest caveat
 
-Every frame-time figure quoted here comes from published analysis of the launch build. Nothing in
-this repository has measured a frame yet. The profile tiers are reasoned from the game's own source
-and from what each pass costs in principle — they are informed hypotheses, not results. Iceflake now
-ships a benchmark tool; wiring the patcher up to it for before/after comparison is the next task, and
-until that exists, every performance claim here should be read with that in mind.
+The table above is measured on one machine, at one resolution, on one build, with one run per
+configuration — no repeats, so run-to-run variance is unquantified. The relative ordering is large
+enough to be trustworthy; the exact percentages are not. Nothing here has been measured on any
+other hardware, and the goal for this project is 60 stable fps, which none of these configurations
+reaches.

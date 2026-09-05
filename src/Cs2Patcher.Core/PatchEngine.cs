@@ -122,7 +122,9 @@ public sealed class PatchEngine(string settingsFilePath, string backupDirectory)
 
             try
             {
-                var block = doc.GetOrAddQualitySetting(tweak.TypeName);
+                var block = tweak.TypeName == Profiles.GraphicsRoot
+                    ? doc.GetGraphicsRoot()
+                    : doc.GetOrAddQualitySetting(tweak.TypeName);
                 var before = block[tweak.Property]?.ToJsonString() ?? "unset";
                 var after = tweak.Value.ToJsonString();
                 block[tweak.Property] = tweak.Value.DeepClone();

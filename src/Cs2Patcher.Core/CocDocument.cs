@@ -111,6 +111,14 @@ public sealed class CocDocument
     /// has not persisted one. Needed for types like ExtraQualitySettings, which are
     /// absent from a fresh Settings.coc.
     /// </summary>
+    /// <summary>
+    /// The Graphics section's own object, for the settings that sit beside the
+    /// <c>qualitySettings</c> array rather than inside it — vSync, dlssQuality, resolution.
+    /// </summary>
+    public JsonObject GetGraphicsRoot() =>
+        GetSection(GraphicsSection)?.Json
+        ?? throw new InvalidDataException($"'{GraphicsSection}' section is missing.");
+
     public JsonObject GetOrAddQualitySetting(string typeName)
     {
         var existing = GetQualitySetting(typeName);

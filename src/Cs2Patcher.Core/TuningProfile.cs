@@ -70,6 +70,12 @@ public sealed record TuningProfile(string Id, string Name, string Description, I
 public static class Profiles
 {
     // Type discriminators as they appear in Settings.coc.
+    /// <summary>
+    /// Settings that live at the root of the Graphics section instead of inside the
+    /// qualitySettings array. Never a real <c>@type</c>, so it cannot collide with one.
+    /// </summary>
+    public const string GraphicsRoot  = "Game.Settings.GraphicsSettings";
+
     private const string Shadows      = "Game.Settings.ShadowsQualitySettings";
     private const string Lod          = "Game.Settings.LevelOfDetailQualitySettings";
     private const string Extra        = "Game.Settings.ExtraQualitySettings";
