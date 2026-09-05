@@ -566,8 +566,21 @@ average for this benchmark understates ordinary play by about fifteen percent an
 Every measurement in this project up to this point was taken with `vSync` on — it is `true` in
 this machine's `Settings.coc` although the game itself ships it `false`, so somebody turned it on
 in the options years ago and it was never questioned. On a 240 Hz panel that rounds every frame up
-to a multiple of 4.167 ms. Turning it off is worth **+4%** on the average and +5% on the 1% low,
-for tearing that is close to invisible at that refresh rate. It is now in `skyline` and `potato`.
+to a multiple of 4.167 ms. It is now off in `skyline` and `potato`.
+
+What it is worth depends entirely on where a profile's frame time already sits, which is worth
+understanding because the two tiers measured here disagree completely:
+
+| profile | frame time | nearest vblank steps | measured |
+|---|---|---|---|
+| `super-potato` | 13.5 ms | 12.5 and 16.67 | **+4%** |
+| `skyline` | 16.6 ms | 12.5 and 16.67 | **0%** |
+
+`skyline` lands just *under* a step, so vSync was never making it wait. `super-potato` lands just
+*over* one, so every frame was being held to 16.67 ms — nineteen percent thrown away. The same
+change, on the same machine, on the same afternoon. A profile that gains nothing from vSync being
+off is a profile sitting on a refresh boundary, and speeding it up slightly would have gained
+nothing either until it crossed to the next step.
 
 With it off, and the mod running, `super-potato` gives the clearest read available of what this
 hardware can do. Medians per phase:

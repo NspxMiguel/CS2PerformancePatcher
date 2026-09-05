@@ -183,28 +183,30 @@ On an RTX 3050 with a Ryzen 5 4600G at 1080p, over the city the game ships for i
 | | avg | 1% low | GPU |
 |---|---|---|---|
 | untouched | 22.7 | 10.5 | 43.8 ms |
-| `skyline` + mod at Declutter | 51.3 | 22.2 | 18.6 ms |
-| `skyline` + mod at DeclutterMax | **52.9** | **22.6** | 18.0 ms |
+| `skyline` + mod | 53.2 | 22.8 | 18.0 ms |
+| `super-potato` + mod | **68.2** | **26.3** | 13.6 ms |
 
 Split by what the benchmark is doing, because it spends 35 of its 90 seconds at triple simulation
-speed and a single average hides that:
+speed and a single average hides that. The percentage is the share of frames that actually hit 60,
+which is the only number that answers "sixty *stable*":
 
 | | paused | normal speed | 3x speed |
 |---|---|---|---|
 | untouched | 25.5 | 24.9 | 18.8 |
-| `skyline` + Declutter | 59.9 | 58.5 | 38.9 |
-| `skyline` + DeclutterMax | 63.0 | **60.2** | 39.3 |
+| `skyline` + mod | 63.9 | **60.2** — 61% of frames | 39.9 |
+| `super-potato` + mod | 89.5 — 100% | **75.8** — 93% of frames | 48.0 |
 
-Every figure is the mean of three runs. They agreed to 0.6% on the average and 3.6% on the 1% low,
-and the GPU column reproduced to the decimal.
+Three runs each for `skyline`, two for `super-potato`; they agreed to within 1% on the average.
+Neither tier drops a single frame below 30 at normal play speed.
 
-**Sixty at normal play speed**, with full-resolution textures, every building's geometry, and
-traffic still drawn. It sits *on* the line rather than above it — the three runs read 59.9, 60.0
-and 60.8 — so treat it as sixty reached, not sixty cleared.
+**Sixty at normal play speed with the city still sharp**, and seventy-five if you will accept the
+bottom tier's looks. Fast-forward reaches neither, and cannot: at 3x the simulation alone needs
+19.1 ms of CPU per frame before anything is drawn.
 
-Fast-forward does not get there and will not: at 3x the simulation alone needs 19.1 ms of CPU per
-frame before anything is drawn, which caps that phase near 52 fps on this processor no matter what
-the GPU does. This project does not cut the simulation.
+**120 is not reachable on this processor at play speed**, at any graphics setting. 120 fps is an
+8.33 ms budget and the CPU alone spends 11.2 of them — 5.8 ms of engine work that is there even
+while paused, 2.7 ms of simulation, 2.8 ms of render thread. Paused is the one phase not ruled
+out, where the CPU would allow 124. See [docs/FINDINGS.md](docs/FINDINGS.md).
 
 Not yet done, in rough order of value:
 
