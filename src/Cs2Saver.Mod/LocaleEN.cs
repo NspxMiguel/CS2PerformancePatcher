@@ -84,7 +84,23 @@ namespace Cs2Saver
                 { m_Settings.GetEnumValueLocaleID(Look.Vivid), "Vivid — colour put back, nothing else" },
                 { m_Settings.GetEnumValueLocaleID(Look.Toybox), "Toybox — cartoon: strong colour, warm sun, cool shade" },
                 { m_Settings.GetEnumValueLocaleID(Look.Miniature), "Miniature — model railway under a lamp" },
+                { m_Settings.GetEnumValueLocaleID(Look.Showroom), "Showroom — architectural render: warm light, cool sky, soft shadows" },
                 { m_Settings.GetEnumValueLocaleID(Look.Cel), "Cel — flat bands of light, the drawn look" },
+
+                {
+                    m_Settings.GetOptionLabelLocaleID(nameof(Settings.CitySurface)),
+                    "How surfaces catch the light"
+                },
+                {
+                    m_Settings.GetOptionDescLocaleID(nameof(Settings.CitySurface)),
+                    "Rewrites the game's own materials so asphalt stops looking wet and roof tiles " +
+                    "stop glinting. This changes the art rather than the picture, and glass is never " +
+                    "touched 2014 leaving the windows glossy against flat walls is what makes a city read " +
+                    "as an architectural render instead of a clay model."
+                },
+                { m_Settings.GetEnumValueLocaleID(Surface.Off), "Off — the game's own materials" },
+                { m_Settings.GetEnumValueLocaleID(Surface.Matte), "Matte — the wet sheen comes off" },
+                { m_Settings.GetEnumValueLocaleID(Surface.Painted), "Painted — flat as poster paint" },
 
                 {
                     m_Settings.GetOptionLabelLocaleID(nameof(Settings.RecordFrameTimings)),

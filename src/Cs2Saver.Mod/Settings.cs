@@ -57,6 +57,14 @@ namespace Cs2Saver
         [SettingsUISection(MainSection, RenderingGroup)]
         public Look CityLook { get; set; } = Look.Off;
 
+        /// <summary>
+        /// How the city's surfaces respond to light. This is the one setting that changes the art
+        /// rather than the picture: it rewrites the game's own materials in memory, so asphalt
+        /// stops looking wet and roof tiles stop glinting. Glass is never touched.
+        /// </summary>
+        [SettingsUISection(MainSection, RenderingGroup)]
+        public Surface CitySurface { get; set; } = Surface.Off;
+
         /// <summary>Records frame timing to a CSV so a preset can be judged by numbers.</summary>
         [SettingsUISection(MainSection, MeasurementGroup)]
         public bool RecordFrameTimings { get; set; }
@@ -72,6 +80,7 @@ namespace Cs2Saver
         {
             Preset = BudgetPreset.Off;
             CityLook = Look.Off;
+            CitySurface = Surface.Off;
             RecordFrameTimings = false;
             RunLabel = "baseline";
         }
@@ -100,6 +109,16 @@ namespace Cs2Saver
             if (Mod.PrefabFloor != null) Mod.PrefabFloor.Budget = budget;
 
             if (Mod.CityLook != null) Mod.CityLook.Look = CityLook;
+
+            // One survey per session, once a city is loaded. It writes what the city is actually
+            // built from into the log, which is the only reliable way to find out: a material
+            // property written by a guessed name fails silently and looks exactly like a setting
+            // that does nothing.
+            if (Mod.MaterialStyle != null)
+            {
+                Mod.MaterialStyle.Surface = CitySurface;
+                Mod.MaterialStyle.RequestSurvey();
+            }
 
             if (Mod.FrameLog != null)
             {

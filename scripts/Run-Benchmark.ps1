@@ -49,8 +49,12 @@ param(
     [string]$ModPreset,
 
     # Cs2Saver colour grading preset. Same mechanism as -ModPreset.
-    [ValidateSet('Off', 'Vivid', 'Toybox', 'Miniature', 'Cel')]
+    [ValidateSet('Off', 'Vivid', 'Toybox', 'Miniature', 'Showroom', 'Cel')]
     [string]$ModLook,
+
+    # Cs2Saver material restyle. Same mechanism again.
+    [ValidateSet('Off', 'Matte', 'Painted')]
+    [string]$ModSurface,
 
     # How long to wait for the result before giving up. A run is 90s plus loading.
     [int]$TimeoutSec = 420,
@@ -240,6 +244,7 @@ function Set-ModSetting([string]$Key, [string]$Value) {
 
 if ($ModPreset) { Set-ModSetting 'Preset' $ModPreset }
 if ($ModLook) { Set-ModSetting 'CityLook' $ModLook }
+if ($ModSurface) { Set-ModSetting 'CitySurface' $ModSurface }
 
 # Mods only load when the game has a Paradox session, which arrives on the command line from
 # the launcher. Replaying a captured one is what makes the mod benchmarkable unattended;

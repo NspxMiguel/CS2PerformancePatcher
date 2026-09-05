@@ -25,6 +25,7 @@ namespace Cs2Saver
         internal static PrefabLodFloorSystem PrefabFloor;
         internal static FrameLogSystem FrameLog;
         internal static CityLookSystem CityLook;
+        internal static MaterialStyleSystem MaterialStyle;
         internal static Settings Setting;
 
         public void OnLoad(UpdateSystem updateSystem)
@@ -67,6 +68,12 @@ namespace Cs2Saver
                 updateSystem.UpdateAt<CityLookSystem>(SystemUpdatePhase.PostSimulation);
                 CityLook = updateSystem.World.GetOrCreateSystemManaged<CityLookSystem>();
                 CityLook.Look = Look.Off;
+            });
+
+            TryRegister("material style", () =>
+            {
+                updateSystem.UpdateAt<MaterialStyleSystem>(SystemUpdatePhase.PostSimulation);
+                MaterialStyle = updateSystem.World.GetOrCreateSystemManaged<MaterialStyleSystem>();
             });
 
             TryRegister("frame log", () =>
@@ -115,9 +122,10 @@ namespace Cs2Saver
                 // to Off actually puts the city back rather than leaving it cut until restart.
                 if (PrefabFloor != null) PrefabFloor.Budget = RenderBudget.Off;
 
-                // Same reason: the volume must go, or the city keeps this mod's colour grading
-                // after the mod itself is gone.
+                // Same reason for both: the city keeps this mod's colour grading and its flattened
+                // materials after the mod itself is gone unless they are handed back here.
                 if (CityLook != null) CityLook.Look = Look.Off;
+                if (MaterialStyle != null) MaterialStyle.Surface = Surface.Off;
 
                 if (FrameLog != null) FrameLog.Recording = false;
             }
@@ -128,6 +136,9 @@ namespace Cs2Saver
             finally
             {
                 BudgetSystem = null;
+                PrefabFloor = null;
+                CityLook = null;
+                MaterialStyle = null;
                 FrameLog = null;
                 Log.Info($"{nameof(Cs2Saver)} unloaded.");
             }

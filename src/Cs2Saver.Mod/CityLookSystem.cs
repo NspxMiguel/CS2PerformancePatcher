@@ -48,6 +48,8 @@ namespace Cs2Saver
         private WhiteBalance m_WhiteBalance;
         private Vignette m_Vignette;
         private ColorCurves m_Curves;
+        private Bloom m_Bloom;
+        private IndirectLightingController m_Indirect;
         private TextureCurve m_Linear;
         private TextureCurve m_Stepped;
 
@@ -106,6 +108,8 @@ namespace Cs2Saver
             m_WhiteBalance = profile.Add<WhiteBalance>();
             m_Vignette = profile.Add<Vignette>();
             m_Curves = profile.Add<ColorCurves>();
+            m_Bloom = profile.Add<Bloom>();
+            m_Indirect = profile.Add<IndirectLightingController>();
 
             m_Linear = Ramp(bands: 0);
             // Fourteen, not nine. Nine was tried on a real city and read as damage rather than as
@@ -126,6 +130,12 @@ namespace Cs2Saver
             }
 
             m_Volume.enabled = true;
+
+            // Neutral starting point for the two components that are not set by every look. A
+            // volume override sticks until something overwrites it, so without this a preset
+            // would silently inherit whatever the previously selected one left behind.
+            Glow(intensity: 0f, warmth: 0f);
+            Ambient(1f);
 
             switch (look)
             {
@@ -172,6 +182,24 @@ namespace Cs2Saver
                 // turned up. It is the closest this gets to cel shading without a shader: real
                 // cel shading also draws an ink outline, which needs a depth-and-normal pass
                 // this mod has no way to ship.
+                // The one aimed at looking good rather than at looking stylised: an architectural
+                // render, which is what a city builder is closest to anyway. Warm light against a
+                // cool sky, shadows lifted so shape survives in them, and enough glow on bright
+                // surfaces that a lit window reads as lit.
+                //
+                // Nothing here is physically honest. Bounced light above 1.0 does not happen, and
+                // that is the point — a photograph lets its shadows go black and a render of a
+                // building never does, because the building is the subject.
+                case Cs2Saver.Look.Showroom:
+                    Grade(saturation: 28f, contrast: 12f, exposure: 0.12f);
+                    Tone(TonemappingMode.Neutral);
+                    Split(shadows: new Color(0.40f, 0.46f, 0.62f), highlights: new Color(0.62f, 0.56f, 0.46f), balance: 0f);
+                    Balance(temperature: 5f, tint: 0f);
+                    Glow(intensity: 0.35f, warmth: 0.06f);
+                    Ambient(1.35f);
+                    Vignette(0.12f);
+                    break;
+
                 case Cs2Saver.Look.Cel:
                     // Brighter and far closer to neutral than the other looks, because the stepped
                     // curve is itself a large change: it lowers everything in the lower bands, and
@@ -266,6 +294,37 @@ namespace Cs2Saver
             m_WhiteBalance.tint.Override(tint);
         }
 
+        /// <summary>
+        /// Light bleeding out of bright surfaces. This is what makes a lit window at dusk read as
+        /// a lit window rather than as a pale rectangle, and it is most of the difference between
+        /// an architectural render and a screenshot.
+        /// </summary>
+        private void Glow(float intensity, float warmth)
+        {
+            m_Bloom.active = intensity > 0f;
+            m_Bloom.intensity.Override(intensity);
+
+            // Scatter is how far the light spreads. High values are soft and expensive-looking;
+            // they are not expensive, the pass costs the same either way.
+            m_Bloom.scatter.Override(0.72f);
+
+            // Only the genuinely bright things, so the whole image does not go milky.
+            m_Bloom.threshold.Override(0.9f);
+            m_Bloom.tint.Override(new Color(0.5f + warmth, 0.5f, 0.5f - warmth * 0.6f));
+        }
+
+        /// <summary>
+        /// How much bounced light fills the shadows. Above one is not physically honest, and that
+        /// is the point: an architectural render lifts its shadows so that shape stays readable
+        /// where a photograph would go black.
+        /// </summary>
+        private void Ambient(float multiplier)
+        {
+            m_Indirect.active = true;
+            m_Indirect.indirectDiffuseLightingMultiplier.Override(multiplier);
+            m_Indirect.reflectionLightingMultiplier.Override(multiplier);
+        }
+
         private void Vignette(float intensity)
         {
             m_Vignette.active = intensity > 0f;
@@ -298,6 +357,9 @@ namespace Cs2Saver
 
         /// <summary>Model-railway light. Warm, lifted, slightly vignetted.</summary>
         Miniature,
+
+        /// <summary>Architectural render: warm light, cool sky, lifted shadows, glow.</summary>
+        Showroom,
 
         /// <summary>The drawn one: flat bands of light instead of a smooth gradient.</summary>
         Cel,
