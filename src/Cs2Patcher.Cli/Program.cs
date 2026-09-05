@@ -253,6 +253,14 @@ int Apply()
     foreach (var line in result.Applied) Console.WriteLine($"  + {line}");
     foreach (var line in result.Skipped) Console.WriteLine($"  ! {line}");
 
+    // The one thing a profile can want from the mod. Silent when there is nothing to say, which
+    // is every profile that does not turn the sun's shadow on and every player without the mod.
+    if (result.Success && install.UserDataDir is not null)
+    {
+        var mod = ModTuning.Apply(install.UserDataDir, profile);
+        if (mod.Message is not null) Console.WriteLine($"  {(mod.Written ? "+" : "!")} {mod.Message}");
+    }
+
     if (result.Success)
     {
         Console.WriteLine();

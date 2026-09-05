@@ -92,13 +92,23 @@ public sealed record Measured(double Fps, double OnePercentLow, int ShareAtSixty
 /// from whatever the desktop is currently in, refresh rate included, because a mode the driver
 /// rejects is a black screen on somebody else's computer.
 /// </param>
+/// <param name="ModShadowReach">
+/// What to set Cs2Saver's sun-shadow reach to when this profile is applied, or null to leave the
+/// mod's settings alone.
+///
+/// Only a profile that switches the sun's shadow on has any business setting this, and such a
+/// profile has to: turning shadows on is a game setting, bounding their distance is an HDRP volume
+/// parameter the game never exposes, and the difference between the two is six frames per second
+/// against one. See <see cref="ModTuning"/>.
+/// </param>
 public sealed record TuningProfile(
     string Id,
     string Name,
     string Description,
     IReadOnlyList<Tweak> Tweaks,
     Measured? Measured = null,
-    double? ScreenScale = null);
+    double? ScreenScale = null,
+    string? ModShadowReach = null);
 
 /// <summary>
 /// The built-in profiles.
@@ -441,7 +451,9 @@ public static class Profiles
     public static readonly TuningProfile Handsome = new(
         "handsome", "Handsome",
         "Sixty frames that do not look like sixty frames cost anything. Full-resolution textures, "
-        + "the game's own Low geometry, and three times the internal resolution of the tier below.",
+        + "the game's own Low geometry, three times the internal resolution of the tier below, and "
+        + "-- the thing that separates this tier from the rest -- the sun's shadow and ambient "
+        + "occlusion back, because a city with neither is not stylised, it is flat.",
         [
             .. SuperPotato.Tweaks,
 
@@ -491,7 +503,11 @@ public static class Profiles
             new(Ssao, "maxPixelRadius", 24, Cost.Cheap, "Contact shading, not a global darkening.",
                 16, 256),
         ],
-        new Measured(46.0, 24.0, 32));
+        new Measured(57.1, 29.3, 51),
+
+        // Bounded to a hundred metres by the mod, without which the shadows above cost six frames
+        // per second instead of one. Street level is the only place a shadow is looked at.
+        ModShadowReach: "Block");
 
     /// <summary>
     /// Below the bottom. For hardware where the question is whether the game runs at all.

@@ -276,8 +276,10 @@ public static class Text
             "sharp" => "Corta todo efeito de tela. Geometria e texturas absolutamente intactas.",
 
             "handsome" => "Sessenta quadros que não parecem ter custado nada. Textura em resolução "
-                          + "cheia, geometria no 'Low' do próprio jogo, e três vezes a resolução "
-                          + "interna do perfil abaixo.",
+                          + "cheia, geometria no 'Low' do próprio jogo, três vezes a resolução "
+                          + "interna do perfil abaixo, e — o que separa este dos outros — a sombra "
+                          + "do sol e a oclusão de volta, porque uma cidade sem nenhuma das duas "
+                          + "não fica estilizada, fica chapada.",
 
             "skyline" => "Prédios e texturas nítidos; as sombras do sol e o entulho é que cedem.",
 

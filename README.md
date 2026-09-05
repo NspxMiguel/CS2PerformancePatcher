@@ -152,6 +152,16 @@ It costs nothing, and that is measured rather than assumed: `skyline` with `Cel`
 against 53.2 across three runs of the same profile with no look, and the GPU frame stayed at
 17.9 ms.
 
+**It also bounds the sun's shadow.** HDRP keeps the shadow distance in a volume component the game
+creates but never exposes, so no settings file reaches it — which is exactly the kind of thing this
+mod is for. Measured at normal play speed on `handsome`, the same shadows with the same cascade
+count and the same resolution cost **6.0 fps at the distance the game picks and 0.9 at a hundred
+metres.** Beyond that distance nobody was looking at a shadow anyway.
+
+This is why `handsome` can afford to have shadows at all, and why applying it also writes the mod's
+reach setting when the mod is installed. Turning shadows *on* is the game's own setting and only a
+profile reaches it; bounding them is only the mod's. Neither half is much use alone.
+
 **One honest caveat.** It is built with plain `dotnet build` rather than the official Mod Post
 Processor, so there is no Burst-compiled native companion and its work runs as managed code. That
 mattered once: an earlier version swept every pedestrian and vehicle every frame and cost 5 ms of

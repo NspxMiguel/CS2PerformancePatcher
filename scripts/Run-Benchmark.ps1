@@ -52,6 +52,12 @@ param(
     [ValidateSet('Off', 'Vivid', 'Toybox', 'Miniature', 'Showroom', 'Cel')]
     [string]$ModLook,
 
+    # Cs2Saver foliage survival. Separate from -ModPreset because the preset's tree cut is a
+    # degree and this is a taste, and because it is the single setting that moved a photograph
+    # of a suburb the most.
+    [ValidateSet('Untouched', 'Full', 'Balanced', 'Thin')]
+    [string]$ModGreenery,
+
     # Cs2Saver sun-shadow distance, named rather than numbered. The one mod knob that spends
     # frames instead of buying them, so it gets measured like a profile tweak rather than
     # assumed like the grading.
@@ -312,6 +318,7 @@ if ($ShotAt.Count -gt 0) {
 if ($ModPreset) { Set-ModSetting 'Preset' $ModPreset }
 if ($ModLook) { Set-ModSetting 'CityLook' $ModLook }
 if ($ModShadows) { Set-ModSetting 'SunShadows' $ModShadows }
+if ($ModGreenery) { Set-ModSetting 'Greenery' $ModGreenery }
 if ($ModSurface) { Set-ModSetting 'CitySurface' $ModSurface }
 if ($ModStopAnimating) { Set-ModFlag 'StopAnimating' ($ModStopAnimating -eq 'true') }
 

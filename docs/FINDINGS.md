@@ -760,16 +760,19 @@ toward mid-grey. The cause was not the colour grading, which was doing its job; 
 occlusion. A city with neither is not a stylised city. It is a flat one: grass with no texture,
 buildings with no volume, trees pasted onto the ground.
 
-Priced against a same-session control, both turned out to be affordable after all:
+Priced against a same-session control, at normal play speed, both turned out to be affordable:
 
-| | avg fps | vs control |
-|---|---|---|
-| `handsome`, control | 51.0 | — |
-| + ambient occlusion, 4 steps / 24 px | 50.0 | −1.0 |
-| + sun shadow, 1 cascade, 1024, bounded to 100 m | 46.3* | −2.5 |
-| + sun shadow at the game's own distance | 45.1 | −5.3 |
+| | avg fps | 1% low | at 60 | vs control |
+|---|---|---|---|---|
+| `handsome`, control (two runs) | 58.0 | 30.7 | 55% | — |
+| + ambient occlusion, 4 steps / 24 px | 56.8 | 31.7 | 47% | −1.2 |
+| + sun shadow, 1 cascade, 1024, bounded to 100 m | 57.1 | 29.3 | 51% | **−0.9** |
+| + sun shadow at the game's own distance | 52.0 | 25.8 | 39% | −6.0 |
 
-\* measured with `Cs2Saver` bounding the distance; see below.
+The third row is the whole point of the section below it. The same shadows, with the same cascade
+count and the same resolution, cost six frames per second at the distance the game picks and one
+at a hundred metres — and a hundred metres is the distance beyond which nobody was looking at a
+shadow anyway.
 
 Both are now in `handsome`. The tier's claim is that sixty frames do not have to look like sixty
 frames cost anything, and without these it could not make that claim.
@@ -797,13 +800,27 @@ no error, and a log line reporting success. There is a fourth gate somewhere in 
 the sun to HDRP; it was not worth more runs to find, because a tuning profile reaches the first
 condition from the front and the mod's job here is the distance.
 
-## Absolute frame rates drift between sessions; ratios do not
+## Two numbers for the same run, and an afternoon lost to not noticing
 
-A `handsome` control measured 53.7 in one session and 51.0 in another, on the same machine, same
-build, same settings, with the host under 6% both times. The ladder in this document and in the
-profile selector is therefore only meaningful as a set of runs taken together: a table assembled
-from measurements hours apart compares the machine's mood as much as the settings.
+A `handsome` control measured 51.0 while the profile in the code claimed 58.1, on the same machine
+and the same settings, and that gap was written up here as session-to-session drift before it was
+checked. It is not drift. They are different measurements of the same run.
 
-Every published ladder is one session, and every A/B in this document is a run against a control
-taken beside it. Nothing here should be read as "this profile gives you N fps" — only as "this
-profile gives you N times what stock gives you on the same afternoon".
+`cs2patch bench` reports the whole-run average across all 90 seconds. The figures in
+`TuningProfile.Measured` are the speed-1 phase — normal play — which is what a player experiences
+and what the selector quotes. The benchmark spends 35 of its 90 seconds at triple simulation
+speed, where the simulation is the wall and the frame rate is roughly 38 whatever the graphics
+settings are, and that drags the whole-run average down by about fifteen percent.
+
+The same control, split by phase:
+
+| phase | avg fps | 1% low | at 60 |
+|---|---|---|---|
+| paused | 59.4 | 30.6 | 61% |
+| speed 1 (normal play) | **58.2** | **30.4** | **55%** |
+| speed 3 (fast-forward) | 38.0 | 16.6 | 1% |
+
+Run-to-run spread on the same configuration is about 0.3 fps at play speed, which is what the ±2%
+caveat above already said. Nothing has drifted. Every A/B in this document compares play-speed
+figures against a control taken in the same session; comparing a `bench` row against a `Measured`
+value compares two different things and will always look like a regression.
