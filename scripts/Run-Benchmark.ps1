@@ -49,7 +49,13 @@ param(
     [string]$ModPreset,
 
     # How long to wait for the result before giving up. A run is 90s plus loading.
-    [int]$TimeoutSec = 420
+    [int]$TimeoutSec = 420,
+
+    # Refuse to measure if the machine is already this busy before the game even starts.
+    [int]$MaxHostLoadPercent = 25,
+
+    # Measure anyway. For when you know what else is running and only care about GPU numbers.
+    [switch]$IgnoreHostLoad
 )
 
 $ErrorActionPreference = 'Stop'
@@ -97,6 +103,25 @@ New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
 Write-Host "== $Label ==" -ForegroundColor Cyan
 Stop-Game
+
+# A busy machine quietly ruins a run. One WMI query running alongside a benchmark turned 24.1
+# fps into 18.1, and a batch measured while other work was running reported the mod costing CPU
+# when it was idle -- both looked like results. Sample after killing the game so the reading is
+# of everything else.
+Start-Sleep -Seconds 2
+$busy = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+if ($busy -ge $MaxHostLoadPercent) {
+    $offenders = Get-Process |
+        Where-Object { $_.CPU -gt 30 -and $_.ProcessName -notin @('Idle', 'System') } |
+        Sort-Object CPU -Descending | Select-Object -First 5
+
+    Write-Warning "The machine is $busy% busy before this run even starts. Anything measured here is noise."
+    foreach ($p in $offenders) { Write-Warning ("  {0} (pid {1})" -f $p.ProcessName, $p.Id) }
+    if (-not $IgnoreHostLoad) {
+        throw "Refusing to measure on a $busy% busy machine. Close what is running, or pass -IgnoreHostLoad."
+    }
+}
+Write-Host ("  host at {0}% before launch" -f $busy)
 
 if ($Revert) {
     Write-Host '  reverting settings'
