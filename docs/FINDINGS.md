@@ -318,6 +318,20 @@ single 642 ms frame is almost certainly the shader-variant compile triggered by
 measurement window. Quote the 1% low, which is 32 frames; treat the 0.1% column as an outlier
 detector rather than a result.
 
+## The game reorders `Settings.coc` sections on its own
+
+A file the patcher had reverted came back byte-different from the copy taken before any of this
+started — same 3741 bytes, same values, but with `Gameplay Settings`, `Keybinding Settings` and
+`Interface Settings` in a different order.
+
+The revert is not at fault; it restores its backup exactly, and that is hash-verified. The game
+rewrites the file itself and does not preserve section order between writes.
+
+This matters for `HasDriftedSincePatch()`, which compares hashes: after the game has written the
+file once, it will report drift even when every value is identical to what the patcher wrote. The
+warning is currently more alarming than the situation. Comparing parsed sections rather than raw
+bytes would fix it.
+
 ## Why the mod does not load, and what that costs
 
 `Cs2Saver.dll` copied into `.cache/Mods/local/Cs2Saver/` is not enough. The game starts, logs
