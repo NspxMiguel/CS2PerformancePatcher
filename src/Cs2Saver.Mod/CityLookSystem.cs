@@ -191,13 +191,17 @@ namespace Cs2Saver
                 // that is the point — a photograph lets its shadows go black and a render of a
                 // building never does, because the building is the subject.
                 case Cs2Saver.Look.Showroom:
-                    Grade(saturation: 28f, contrast: 12f, exposure: 0.12f);
+                    // Ambient at 1.35 was tried against flattened materials and washed the city
+                    // out: matte surfaces have no specular highlight to hold the top of the range,
+                    // so lifting the shadows as well leaves nothing anywhere. Lifting less and
+                    // taking the contrast back in grading holds shape at both ends.
+                    Grade(saturation: 34f, contrast: 22f, exposure: 0.06f);
                     Tone(TonemappingMode.Neutral);
                     Split(shadows: new Color(0.40f, 0.46f, 0.62f), highlights: new Color(0.62f, 0.56f, 0.46f), balance: 0f);
                     Balance(temperature: 5f, tint: 0f);
-                    Glow(intensity: 0.35f, warmth: 0.06f);
-                    Ambient(1.35f);
-                    Vignette(0.12f);
+                    Glow(intensity: 0.40f, warmth: 0.06f);
+                    Ambient(1.12f);
+                    Vignette(0.14f);
                     break;
 
                 case Cs2Saver.Look.Cel:

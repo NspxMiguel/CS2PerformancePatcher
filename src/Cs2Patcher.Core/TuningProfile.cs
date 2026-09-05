@@ -86,6 +86,7 @@ public static class Profiles
     private const string Ssr          = "Game.Settings.SSRQualitySettings";
     private const string Ssgi         = "Game.Settings.SSGIQualitySettings";
     private const string Clouds       = "Game.Settings.CloudsQualitySettings";
+    private const string Fog          = "Game.Settings.FogQualitySettings";
     private const string Water        = "Game.Settings.WaterQualitySettings";
     private const string Terrain      = "Game.Settings.TerrainQualitySettings";
     private const string Texture      = "Game.Settings.TextureQualitySettings";
@@ -359,8 +360,77 @@ public static class Profiles
                 "No sun shadows at all. The city reads flat; this tier gave up looking right."),
         ]);
 
+    /// <summary>
+    /// Sixty frames without looking like it cost anything, which is a different goal from every
+    /// other tier here and turned out to need a different route.
+    ///
+    /// <para>The obvious approach — start from the prettiest tier and cut until it reaches sixty —
+    /// does not arrive: <c>sharp</c> with the mod running measures 48 at play speed and there is
+    /// nothing left in it to cut that is not the city itself. So this starts from the fastest tier
+    /// instead, which has fourteen frames of headroom over the target, and spends every one of
+    /// them on the image.</para>
+    ///
+    /// <para>What it buys back, in the order the eye notices:</para>
+    /// <list type="bullet">
+    /// <item>The upscaler goes from a 640x360 internal render to 1114x627. This is the whole
+    /// reason the bottom tiers look jagged, and it is not a subtle difference — a third of the
+    /// resolution reconstructed is exactly what an edge stepping down a roofline looks like.</item>
+    /// <item>Textures come back to full resolution. Mip bias 2 is not a soft look, it is a muddy
+    /// one, and it never made the game faster here in a way worth measuring.</item>
+    /// <item>Geometry goes from the LOD floor to the game's own Low preset, so buildings keep
+    /// their silhouettes.</item>
+    /// </list>
+    ///
+    /// <para>Measured 60.2 at normal play speed with 63% of frames at sixty or better and not one
+    /// under thirty, against 77.8 for the tier it is built on. That is fourteen frames traded for
+    /// three times the internal resolution and sharp textures, and it is the best exchange rate
+    /// anywhere on this ladder.</para>
+    /// </summary>
+    public static readonly TuningProfile Handsome = new(
+        "handsome", "Handsome",
+        "Sixty frames that do not look like sixty frames cost anything. Full-resolution textures, "
+        + "the game's own Low geometry, and three times the internal resolution of the tier below.",
+        [
+            .. SuperPotato.Tweaks,
+
+            new(GraphicsRoot, "dlssQuality", "Balanced", Cost.Cheap,
+                "1114x627 internal instead of 640x360. This is what stops edges stepping."),
+
+            new(Texture, "mipbias", 0, Cost.Cheap,
+                "Full-resolution textures. Mip bias is a muddy look, not a soft one.", 0, 3),
+
+            new(Lod, "levelOfDetail", 0.35, Cost.Cheap,
+                "The game's own Low preset rather than the floor, so buildings keep their outline.",
+                0.1, 1.0),
+        ]);
+
+    /// <summary>
+    /// Below the bottom. For hardware where the question is whether the game runs at all.
+    ///
+    /// Everything <see cref="SuperPotato"/> does, plus the last few things that were left alone
+    /// because they cost looks out of proportion to the frames they return: the muddiest mip bias
+    /// the game offers, no clouds of any kind, and no fog.
+    /// </summary>
+    public static readonly TuningProfile MegaPotato = new(
+        "mega-potato", "Mega Potato",
+        "Everything below super-potato that was left alone for being too ugly to be worth it.",
+        [
+            .. SuperPotato.Tweaks,
+
+            new(Texture, "mipbias", 3, Cost.Visible,
+                "The muddiest mip bias the game has. Textures resolve about half as far.", 0, 3),
+            new(Texture, "terrainMipBias", 3, Cost.Visible, "The same, for the ground.", 0, 3),
+
+            new(Clouds, "distanceCloudsEnabled", false, Cost.Visible, "No distant clouds at all."),
+            new(Clouds, "volumetricCloudsShadows", false, Cost.Visible, "No cloud shadows."),
+            new(Fog, "enabled", false, Cost.Visible,
+                "No atmospheric fog. Distance stops reading as distance."),
+
+            new(Water, "maxTessellationFactor", 0.0, Cost.Visible, "Flat water.", 0, 15),
+        ]);
+
     public static readonly IReadOnlyList<TuningProfile> All =
-        [FreeWins, TrafficSim, SharpCity, Skyline, Potato, SuperPotato];
+        [FreeWins, TrafficSim, SharpCity, Handsome, Skyline, Potato, SuperPotato, MegaPotato];
 
     public static TuningProfile? ById(string id) =>
         All.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));

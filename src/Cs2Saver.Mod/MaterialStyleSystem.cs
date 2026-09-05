@@ -42,10 +42,20 @@ namespace Cs2Saver
             "BH/SG_DefaultShader",
             "BH/SG_CurvedShader",
             "BH/NetCompositionMeshLitShader",
-            "Shader Graphs/AreaDecalShader",
-            "Shader Graphs/AreaShader",
-            "BH/Decals/CurvedDecalShader",
         };
+
+        // Deliberately NOT restyled, after a report of the bottom toolbar going missing:
+        //
+        //     Shader Graphs/AreaDecalShader
+        //     Shader Graphs/AreaShader
+        //     BH/Decals/CurvedDecalShader
+        //
+        // These are overlays -- zoning, districts, road markings -- and they are Shader Graphs,
+        // where a property called _Metallic is only called that. The graph is free to wire it to
+        // opacity, to a blend factor, to anything. On a lit surface shader the name is a contract
+        // because HDRP's lit stack defines it; on an overlay graph it is a label. Three lit
+        // shaders carry the city and are worth having; the overlays were worth almost nothing
+        // visually and carried a risk that could not be checked from outside.
 
         private readonly Dictionary<Material, Vector2> m_Original = new Dictionary<Material, Vector2>();
 
@@ -53,9 +63,27 @@ namespace Cs2Saver
         private bool m_Dirty;
         private int m_LastMaterialCount = -1;
 
-        /// <summary>Frames between checks for newly loaded materials. Roughly twice a second.</summary>
-        private const int PollInterval = 30;
+        /// <summary>
+        /// How often to look for newly loaded materials, in frames — often while the answer is
+        /// still changing, rarely once it has settled.
+        ///
+        /// Twice a second was the first attempt and it cost more than the whole feature was worth:
+        /// the paused-phase 1% low fell from 61.8 fps to 25.4, which is not a steady cost but a
+        /// periodic stall, because <c>FindObjectsOfTypeAll</c> walks every loaded object and
+        /// allocates an array of them. Materials arrive while a city loads and essentially never
+        /// afterwards, so the poll backs off to once every ten seconds as soon as the count stops
+        /// moving, and a setting change resets it.
+        /// </summary>
+        private const int PollWhileLoading = 30;
+        // Ten seconds still cost something: with the settled poll at 600 frames the paused-phase
+        // 1% low sat at 48.6 against 61.8 with the feature off, and a paused phase is 1665 frames
+        // of which the slowest sixteen decide that number -- roughly the number of polls in it.
+        // Thirty seconds is still fast enough to notice a different city being loaded.
+        private const int PollWhenSettled = 1800;
+        private const int PollsToSettle = 5;
+
         private int m_FramesSincePoll;
+        private int m_StablePolls;
         private bool m_Surveyed;
         private bool m_WantSurvey;
 
@@ -86,7 +114,8 @@ namespace Cs2Saver
             // object and allocates, and this project has already measured what a per-frame sweep
             // costs: five milliseconds of CPU to save one of GPU. Twice a second is far more often
             // than a city gains materials.
-            var poll = m_Surface != Cs2Saver.Surface.Off && ++m_FramesSincePoll >= PollInterval;
+            var interval = m_StablePolls >= PollsToSettle ? PollWhenSettled : PollWhileLoading;
+            var poll = m_Surface != Cs2Saver.Surface.Off && ++m_FramesSincePoll >= interval;
             if (poll) m_FramesSincePoll = 0;
 
             if (m_Dirty || poll)
@@ -96,10 +125,12 @@ namespace Cs2Saver
                 if (m_Dirty || live != m_LastMaterialCount)
                 {
                     m_Dirty = false;
+                    m_StablePolls = 0;
                     m_LastMaterialCount = live;
                     try { Restyle(); }
                     catch (System.Exception ex) { Mod.Log.Error(ex, "Could not restyle materials."); }
                 }
+                else m_StablePolls++;
             }
 
             if (!m_WantSurvey || m_Surveyed) return;
