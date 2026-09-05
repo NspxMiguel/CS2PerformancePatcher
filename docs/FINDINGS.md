@@ -221,8 +221,10 @@ auto-detected Medium. Frame cost is whichever of CPU and GPU finished last, per 
 | baseline | 22.7 | 10.5 | 43.8 | 9.1 | 97% |
 | free | 23.7 | 10.7 | 41.9 | 8.2 | 96% |
 | traffic | 24.1 | 10.8 | 41.0 | 8.1 | 94% |
+| sharp | 30.3 (×2 runs) | 10.6 / 9.6 | 32.5 | 7.5 | 90% |
 | potato | 36.8 | 10.3 | 26.6 | 6.2 | 88% |
-| super-potato | 47.4 / 48.5 / 48.6 | 16.5 / 18.7 / 20.2 | ~19.3 | 4.9 | 71% |
+| super-potato | 48.0 (×3 runs) | 16.9 | 19.3 | 4.9 | 72% |
+| super-potato + `targetPatchSize` 64 | 51.2 (×2 runs) | 16.4 | 18.3 | 4.4 | 74% |
 
 ### How much of that is noise
 
@@ -287,12 +289,40 @@ Geometry only pays once the fixed per-frame costs are out of the way.
 The practical consequence for anyone tuning by hand: setting `levelOfDetail` to "something in the
 middle" as a compromise is the one choice that gets neither the frames nor the picture.
 
+### One more setting the presets never reach
+
+`TerrainQualitySettings.targetPatchSize` decides how large a terrain patch is before it becomes
+its own draw. The game's presets run 12 (High) to 24 (Low); the slider goes to 64.
+
+At 64 it measured 51.2 average across two runs on top of `super-potato`, against 48.0 across three
+runs without it — about +7%, well outside the ±2% the average moves on its own. On the `sharp` tier
+it is worth +3%: the same change matters less when there is more else left to draw.
+
+### The mesh budget heuristic is right, tested from both sides
+
+`meshMemoryBudget` is the one setting this tool raises rather than lowers, sized from VRAM. On 8 GB
+it picks 2048. Both directions from there are worse:
+
+| budget | avg fps | 1% low |
+|---|---|---|
+| 1536 | 52.1 | 11.8 |
+| 2048 (chosen) | 52.2 | 16.6 |
+| 4096 | 43.7 | 9.7 |
+
+Too small and the game evicts meshes it is about to need again; too large and it competes with the
+virtual texture atlas and the upscaler's buffers for the same 8 GB. The 1% low is what notices,
+falling by around a third in both directions while the average barely moves at 1536. On a PCIe
+3.0 x8 link, every one of those re-uploads is expensive.
+
 ### Two things that did not work
 
 **More aggressive is not monotonically better.** Adding `mipbias=3` and a 4096 MB mesh budget on
 top of `super-potato` produced 43.7 average against 48.6, and dropped the 1% low to 9.7 — below the
-untouched baseline. On a PCIe 3.0 x8 link, over-committing mesh memory costs more than the smaller
-textures save. The existing budget heuristic was right.
+untouched baseline.
+
+**`maxFrameLatency` does nothing here.** Raising it to 3 to let the CPU run further ahead of a
+bursty GPU measured 48.7 average and a 15.3 1% low, both inside the noise. The bursts are not a
+queueing problem.
 
 **Upscaling alone cannot save a sharp city.** `traffic` plus DLSS UltraPerformance reached 26.1,
 while `potato` plus the same DLSS setting reached 42.1. The machine is limited by geometry before

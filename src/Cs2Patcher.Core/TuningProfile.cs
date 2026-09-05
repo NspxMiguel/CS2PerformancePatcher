@@ -174,13 +174,13 @@ public static class Profiles
     /// map, the expensive shader variants. Buildings, roads and vehicles keep every triangle and
     /// every texel they started with.
     ///
-    /// Measured at +47% average and +14% on the 1% low, against +114% for super-potato. That gap
+    /// Measured at +33% average against +126% for super-potato. That gap
     /// is the price of a sharp city, and it is the honest reason this tier exists rather than
     /// being the default: it costs real frames to look right.
     /// </summary>
     public static readonly TuningProfile SharpCity = new(
         "sharp", "Sharp City",
-        "Cuts everything except the city. Geometry and textures untouched. Measured +47% average.",
+        "Cuts everything except the city. Geometry and textures untouched. Measured +33% average, +47% with the harshest upscaler.",
         [
             .. TrafficSim.Tweaks,
 
@@ -237,18 +237,24 @@ public static class Profiles
 
             new(Texture, "mipbias", 2, Cost.Visible, "Biases toward smaller mips. Softer textures, less VRAM.", 0, 3),
             new(Terrain, "finalTessellation", 2, Cost.Visible, "Lowest terrain tessellation the game declares. It refuses to go below 2.", 2, 5),
+
+            // Bigger terrain patches mean fewer of them to submit. The game's own Low preset
+            // stops at 24; the slider goes to 64, and measured +7% average there. Coarser
+            // terrain LOD granularity is the cost, which is why it sits in this tier.
+            new(Terrain, "targetPatchSize", 64, Cost.Visible,
+                "Larger terrain patches, so fewer draw calls. Game presets stop at 24.", 4, 64),
         ]);
 
     /// <summary>
     /// The bottom of the ladder, for a machine that has no business opening this game at all.
     /// Everything here was measured, and every entry is here because it earned its place:
-    /// together they took an RTX 3050 from 22.7 fps to 48.6, and the 1% low from 10.5 to 20.2.
+    /// together they took an RTX 3050 from 22.7 fps to 51.2, and the 1% low from 10.5 to 16.4.
     ///
     /// It looks how it sounds. That is the trade being offered, not an accident.
     /// </summary>
     public static readonly TuningProfile SuperPotato = new(
         "super-potato", "Super Potato",
-        "Everything above, pushed to where the game stops looking like itself. Measured +114% average.",
+        "Everything above, pushed to where the game stops looking like itself. Measured +126% average.",
         [
             .. Potato.Tweaks,
 
