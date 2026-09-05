@@ -182,6 +182,11 @@ int Targets()
     var mostLow = $"{Truncate(Text.ProfileName(fastest.Profile), 16),-17}{fastest.ExpectedLow,5:N0}low";
     Console.WriteLine($"  {Text.Most,-10}{most,-26}{mostLow,-26}");
     Console.WriteLine();
+    // Worth saying here rather than only in the mod, because the table above makes sixty look
+    // like a much bigger jump than it is: Handsome misses it by two frames and both of them are
+    // in the trees.
+    Console.WriteLine(Text.FoliageNote);
+    Console.WriteLine();
     Console.WriteLine($"  {Text.ApplyWith}:  cs2patch apply <id>       {Text.SeeIdsWith}:  cs2patch list");
     Console.WriteLine($"  {Text.ProjectedFrom} {ProfileAdvisor.ReferenceMachine}. {Text.YoursWillDifferShort}");
 

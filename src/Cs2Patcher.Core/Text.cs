@@ -115,6 +115,13 @@ public static class Text
     public static string OutOfReach => P("out of reach", "fora de alcance");
     public static string Most => P("most", "máximo");
 
+    public static string FoliageNote => P(
+        "  Handsome misses sixty by two frames, and both are in the trees: the mod's foliage\n"
+        + "  setting defaults to keeping the city green, and Thin puts them back (61 fps, 67%).",
+        "  O Handsome perde os sessenta por dois quadros, e os dois estao nas arvores: a opcao\n"
+        + "  de vegetacao do mod vem no padrao que mantem a cidade verde, e Rala devolve\n"
+        + "  esses quadros (61 fps, 67%).");
+
     public static string ProjectedFrom => P("Projected from", "Projetado a partir de");
     public static string YoursWillDifferShort => P("Yours will differ.", "O seu vai diferir.");
 

@@ -52,24 +52,31 @@ Every bound the patcher enforces was read out of the game's own `[SettingsUISlid
 
 | Profile        | What it costs you | At play speed |
 |----------------|-------------------|---------------|
-| `free`         | Nothing you can see. Removes work that produces no visible pixels. | 26 |
-| `traffic`      | Effects you do not look at. City and traffic stay sharp. | 26 |
-| `sharp`        | Every screen-space effect. Geometry and textures completely untouched. | 33 |
-| `handsome`     | Shadows and the clutter. Sharp textures, sharp edges. **Start here.** | **61** |
-| `skyline`      | The same, trading internal resolution for a sharper city. | 60 |
-| `potato`       | Visible cuts, including blurry textures. For machines with no upscaler. | 48 |
-| `super-potato` | Everything, including the internal resolution. Jagged, and fast. | 78 |
-| `mega-potato`  | Below that. Measures as nothing here; kept for hardware this has never run on. | 76 |
+| `free`         | Nothing you can see. Removes work that produces no visible pixels. | 35 |
+| `traffic`      | Effects you do not look at. City and traffic stay sharp. | 36 |
+| `sharp`        | Every screen-space effect. Geometry and textures completely untouched. | 47 |
+| `handsome`     | Shadows and the clutter. Sharp textures, sharp edges. **Start here.** | **58** |
+| `skyline`      | The same, trading internal resolution for a sharper city. | 58 |
+| `potato`       | Visible cuts, including blurry textures. For machines with no upscaler. | 55 |
+| `super-potato` | Everything, including the internal resolution. Jagged, and fast. | 72 |
+| `mega-potato`  | Below that. Two thirds of the resolution. | 74 |
+| `bone-dry`     | Half the resolution. Nothing below this exists. | 73 |
 
-Figures are the speed-1 phase — normal play — with the mod installed, on the machine in
-[docs/FINDINGS.md](docs/FINDINGS.md). Roughly a fifth of every one of them comes from the mod.
+Figures are the speed-1 phase — normal play — with the mod installed at Declutter Max and its
+foliage on the default, on the machine in [docs/FINDINGS.md](docs/FINDINGS.md). Untouched is 27.7
+there. Roughly a fifth of every one of them comes from the mod.
 
 **`handsome` is the one to use.** It is built by starting from the fastest tier and spending its
 whole surplus on the image: 1114x627 internal instead of 640x360, full-resolution textures, and
-the game's own Low geometry rather than the LOD floor. Sixty-one frames at play speed with 67% of
-frames at sixty or better, and not one below thirty.
+the game's own Low geometry rather than the LOD floor. Fifty-eight frames at play speed with 53%
+of frames at sixty or better, and not one below thirty.
 
-Coming at it from the other end does not work. `sharp` with the mod running measures 48, and there
+**Two of those frames are in the trees.** The mod's foliage setting defaults to keeping the city
+green; set it to Thin and the same profile measures 61.4 with 67% of frames at sixty. A city
+without trees in it is a different thing from a city with a lower frame rate, so that choice is a
+setting rather than something decided here.
+
+Coming at it from the other end does not work. `sharp` with the mod running measures 47, and there
 is nothing left in it to cut that is not the city itself.
 
 Each change is tagged `Free`, `Cheap`, or `Visible`, and `cs2patch apply` prints every one with its

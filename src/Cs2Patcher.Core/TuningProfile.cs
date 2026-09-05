@@ -61,17 +61,24 @@ public sealed record Tweak(
 /// What a profile actually did, on the one machine this project has been able to measure.
 ///
 /// All three figures are the benchmark's speed-1 phase — normal play — with the mod installed at
-/// Declutter Max, because that is the configuration the tool recommends and quoting anything else
-/// would be quoting a number nobody runs. The whole-run average of the same benchmark reads about
-/// fifteen percent lower, because it spends 35 of its 90 seconds at triple simulation speed.
+/// Declutter Max and its foliage setting on the default, because that is the configuration the
+/// tool recommends and quoting anything else would be quoting a number nobody runs. The whole-run
+/// average of the same benchmark reads about fifteen percent lower, because it spends 35 of its
+/// 90 seconds at triple simulation speed.
+///
+/// <para><b>The foliage default is worth knowing about, because it moves these by three frames.</b>
+/// An earlier version of this table was measured with the mod cutting trees to a sixteenth of
+/// their distance, which is fast and leaves flat fields where a forest was. The default is now an
+/// eighth, and every figure here dropped by about 5% when it changed. Setting foliage to Thin puts
+/// those frames back, and the mod's own label says so.</para>
 /// </summary>
 /// <param name="Fps">Average frames per second.</param>
 /// <param name="OnePercentLow">Mean of the slowest 1% of frames, as a rate.</param>
 /// <param name="ShareAtSixty">Percentage of frames that met 60 fps.</param>
 public sealed record Measured(double Fps, double OnePercentLow, int ShareAtSixty)
 {
-    /// <summary>Untouched settings with the mod off: 26.1 fps at play speed.</summary>
-    public const double StockFps = 26.1;
+    /// <summary>Untouched settings with the mod off: 27.7 fps at play speed.</summary>
+    public const double StockFps = 27.7;
 
     public int GainPercent => (int)Math.Round((Fps - StockFps) / StockFps * 100);
 }
@@ -157,7 +164,7 @@ public static class Profiles
             new(Clouds, "distanceCloudsShadows", false, Cost.Free,
                 "Distant cloud shadows cost a pass for an effect that reads as ambient shading."),
         ],
-        new Measured(36.7, 22.2, 0));
+        new Measured(35.1, 19.3, 0));
 
     /// <summary>
     /// The city stays sharp and legible; the things you never zoom into stop being
@@ -200,7 +207,7 @@ public static class Profiles
             new(Water, "tessellationFactorFadeRange", 600.0, Cost.Cheap, "Water detail fades faster.", 10, 4000),
             new(Terrain, "finalTessellation", 2, Cost.Cheap, "Terrain tessellation.", 2, 5),
         ],
-        new Measured(37.5, 23.0, 0));
+        new Measured(36.1, 21.1, 0));
 
     /// <summary>
     /// Everything that is not the city itself.
@@ -244,7 +251,7 @@ public static class Profiles
             new(GraphicsRoot, "dlssQuality", "Balanced", Cost.Cheap,
                 "Forces DLSS past the level the game picks for itself. Ignored on cards without it."),
         ],
-        new Measured(48.4, 27.8, 4));
+        new Measured(47.0, 25.8, 2));
 
     /// <summary>
     /// A sharp city that actually runs. The tier this project was aiming at.
@@ -304,7 +311,7 @@ public static class Profiles
             new(GraphicsRoot, "vSync", false, Cost.Cheap,
                 "Stops every frame waiting for the next refresh. May tear; the game ships it off."),
         ],
-        new Measured(59.9, 33.0, 60));
+        new Measured(58.3, 31.8, 54));
 
     /// <summary>
     /// For hardware that has no business running this game. Trades looks for frames,
@@ -350,7 +357,7 @@ public static class Profiles
             new(GraphicsRoot, "vSync", false, Cost.Cheap,
                 "Stops every frame waiting for the next refresh. May tear; the game ships it off."),
         ],
-        new Measured(58.1, 35.7, 56));
+        new Measured(55.1, 30.5, 48));
 
     /// <summary>
     /// The bottom of the ladder, for a machine that has no business opening this game at all.
@@ -398,7 +405,7 @@ public static class Profiles
             new(Shadows, "enabled", false, Cost.Visible,
                 "No sun shadows at all. The city reads flat; this tier gave up looking right."),
         ],
-        new Measured(77.8, 42.7, 95));
+        new Measured(72.4, 36.2, 91));
 
     /// <summary>
     /// Sixty frames without looking like it cost anything, which is a different goal from every
@@ -421,10 +428,15 @@ public static class Profiles
     /// their silhouettes.</item>
     /// </list>
     ///
-    /// <para>Measured 60.2 at normal play speed with 63% of frames at sixty or better and not one
-    /// under thirty, against 77.8 for the tier it is built on. That is fourteen frames traded for
-    /// three times the internal resolution and sharp textures, and it is the best exchange rate
-    /// anywhere on this ladder.</para>
+    /// <para>Measured 58.1 at normal play speed with 53% of frames at sixty or better and not one
+    /// under thirty, against 72.4 for the tier it is built on. Fourteen frames traded for three
+    /// times the internal resolution and sharp textures, which is the best exchange rate anywhere
+    /// on this ladder.</para>
+    ///
+    /// <para>It is two frames short of sixty on that default, and the two frames are in the trees:
+    /// with the mod's foliage set to Thin the same profile measures 61.4. That trade is left to
+    /// the player rather than folded in here, because a city without trees in it is a different
+    /// thing from a city with a lower frame rate and only one person can say which they want.</para>
     /// </summary>
     public static readonly TuningProfile Handsome = new(
         "handsome", "Handsome",
@@ -443,7 +455,7 @@ public static class Profiles
                 "The game's own Low preset rather than the floor, so buildings keep their outline.",
                 0.1, 1.0),
         ],
-        new Measured(61.4, 39.2, 67));
+        new Measured(58.1, 30.9, 53));
 
     /// <summary>
     /// Below the bottom. For hardware where the question is whether the game runs at all.
@@ -485,7 +497,7 @@ public static class Profiles
 
             new(Water, "maxTessellationFactor", 0.0, Cost.Visible, "Flat water.", 0, 15),
         ],
-        new Measured(77.0, 42.5, 94),
+        new Measured(74.2, 37.1, 91),
         ScreenScale: 0.67);
 
     /// <summary>
@@ -501,7 +513,7 @@ public static class Profiles
         "Half the resolution per axis, on top of everything else being at its floor. Nothing "
         + "below this exists, because there is nothing left to turn down.",
         [.. MegaPotato.Tweaks],
-        new Measured(80.3, 43.9, 96),
+        new Measured(73.3, 35.5, 89),
         ScreenScale: 0.5);
 
     public static readonly IReadOnlyList<TuningProfile> All =
