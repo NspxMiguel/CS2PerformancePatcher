@@ -29,6 +29,7 @@ try
         case "install-mod": return InstallMod();
         case "uninstall-mod": return UninstallMod();
         case "bench": return Bench();
+        case "tune-pc": return TunePc();
         case "help" or "--help" or "-h": return Help();
         default:
             Fail($"Unknown command '{command}'.");
@@ -96,9 +97,9 @@ int List()
         var cheap = p.Tweaks.Count(t => t.Cost == Cost.Cheap);
         var visible = p.Tweaks.Count(t => t.Cost == Cost.Visible);
 
-        Console.WriteLine($"  {p.Id,-8} {p.Name}");
-        Console.WriteLine($"           {p.Description}");
-        Console.WriteLine($"           {p.Tweaks.Count} changes — {free} free, {cheap} cheap, {visible} visible");
+        Console.WriteLine($"  {p.Id,-14} {p.Name}");
+        Console.WriteLine($"                 {p.Description}");
+        Console.WriteLine($"                 {p.Tweaks.Count} changes — {free} free, {cheap} cheap, {visible} visible");
         Console.WriteLine();
     }
     Console.WriteLine("  Apply with:  cs2patch apply <id>        Undo with:  cs2patch revert");
@@ -204,6 +205,59 @@ static string DefaultModPath()
         "..", "..", "..", "..", "Cs2Saver.Mod", "bin", "Release", "netstandard2.1", "Cs2Saver.dll"));
 }
 
+int TunePc()
+{
+    var exe = install.InstallDir is null ? null : Path.Combine(install.InstallDir, "Cities2.exe");
+    var findings = HostTuning.Inspect(File.Exists(exe) ? exe : null);
+    var state = HostTuning.StateFile(install.UserDataDir!);
+
+    if (args.Contains("--revert"))
+    {
+        var undone = HostTuning.Undo(findings, state);
+        Console.WriteLine(undone.Count == 0
+            ? "Nothing to undo — this tool has not changed anything on this machine."
+            : $"Restored {undone.Count}:");
+        foreach (var line in undone) Console.WriteLine($"  - {line}");
+        return 0;
+    }
+
+    Console.WriteLine("Outside the game");
+    Console.WriteLine();
+
+    foreach (var f in findings)
+    {
+        var mark = f.Severity switch { Severity.Ok => "ok  ", Severity.Actionable => "FIX ", _ => "note" };
+        Console.WriteLine($"  [{mark}] {f.Name}");
+        Console.WriteLine($"         now: {f.Current}");
+        if (f.Severity != Severity.Ok) Console.WriteLine($"         want: {f.Wanted}");
+        Console.WriteLine($"         {f.Why}");
+        Console.WriteLine();
+    }
+
+    var fixable = findings.Count(f => f.Severity == Severity.Actionable);
+    var advisory = findings.Count(f => f.Severity == Severity.Advisory);
+
+    if (!args.Contains("--apply"))
+    {
+        Console.WriteLine(fixable == 0
+            ? "Nothing here this tool can change."
+            : $"{fixable} of these can be changed from here, reversibly:  cs2patch tune-pc --apply");
+
+        if (advisory > 0)
+            Console.WriteLine($"{advisory} need a BIOS, a reboot, or different hardware. They are yours to make.");
+        return 0;
+    }
+
+    var applied = HostTuning.Apply(findings, state);
+    Console.WriteLine(applied.Count == 0 ? "Nothing to change." : $"Changed {applied.Count}:");
+    foreach (var line in applied) Console.WriteLine($"  + {line}");
+
+    if (applied.Count > 0)
+        Console.WriteLine("  Undo with:  cs2patch tune-pc --revert");
+
+    return 0;
+}
+
 int Bench()
 {
     // Default to wherever the runner script files its results, then fall back to the live
@@ -251,11 +305,11 @@ int Bench()
     Console.WriteLine("  1% low is the mean of the slowest 1% of frames, not the 99th percentile.");
     Console.WriteLine();
 
-    Console.WriteLine($"  {"run",-14}{"frames",7}{"avg fps",9}{"1% low",8}{"0.1% low",10}{"gpu ms",8}{"render ms",10}{"gpu-bound",10}");
+    Console.WriteLine($"  {"run",-20}{"frames",7}{"avg fps",9}{"1% low",8}{"0.1% low",10}{"gpu ms",8}{"render ms",10}{"gpu-bound",10}");
     foreach (var run in runs)
     {
         var e = run.Effective;
-        Console.WriteLine($"  {Truncate(run.Label, 13),-14}{e.Frames,7}{e.AvgFps,9:N1}{e.Low1PctFps,8:N1}"
+        Console.WriteLine($"  {Truncate(run.Label, 19),-20}{e.Frames,7}{e.AvgFps,9:N1}{e.Low1PctFps,8:N1}"
                           + $"{e.Low01PctFps,10:N1}{run.GpuOnly.AvgMs,8:N1}{run.CpuRender.AvgMs,10:N1}{run.GpuBoundPercent,9:N0}%");
     }
 
@@ -267,7 +321,7 @@ int Bench()
         foreach (var run in runs.Skip(1))
         {
             var e = run.Effective;
-            Console.WriteLine($"  {Truncate(run.Label, 13),-14}{"",7}{Delta(baseline.AvgFps, e.AvgFps),9}"
+            Console.WriteLine($"  {Truncate(run.Label, 19),-20}{"",7}{Delta(baseline.AvgFps, e.AvgFps),9}"
                               + $"{Delta(baseline.Low1PctFps, e.Low1PctFps),8}{Delta(baseline.Low01PctFps, e.Low01PctFps),10}"
                               + $"{Delta(first.GpuOnly.AvgMs, run.GpuOnly.AvgMs, lowerIsBetter: true),8}"
                               + $"{Delta(first.CpuRender.AvgMs, run.CpuRender.AvgMs, lowerIsBetter: true),10}");
@@ -381,6 +435,7 @@ int Help()
     Console.WriteLine("  cs2patch apply <profile>     Apply a profile (default: traffic)");
     Console.WriteLine("  cs2patch revert              Restore the original settings");
     Console.WriteLine("  cs2patch bench [path]        Compare benchmark runs (default: .research/bench)");
+    Console.WriteLine("  cs2patch tune-pc             Report what outside the game is costing you frames");
     Console.WriteLine();
     Console.WriteLine("Experimental — the code mod, which is not runtime tested");
     Console.WriteLine("  cs2patch install-mod         Install the Cs2Saver mod into the local mods folder");

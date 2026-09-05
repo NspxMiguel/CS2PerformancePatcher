@@ -121,19 +121,52 @@ dotnet build src/Cs2Patcher.Cli/Cs2Patcher.Cli.csproj -c Release
 
 Requires the .NET 8 SDK. Targets `net8.0-windows`.
 
+## Measuring
+
+The game ships a benchmark — a fixed camera path over a bundled city, 90 seconds, with per-frame
+CPU and GPU timings written to disk. This tool drives it, so a profile can be judged by numbers
+instead of by feel.
+
+```
+scripts\Run-Benchmark.ps1 -Label baseline
+scripts\Run-Benchmark.ps1 -Label traffic -TuningProfile traffic
+cs2patch bench --phases
+```
+
+`--set` pushes a single setting past whatever the profile does, which is how a knob gets measured
+on its own before anyone decides it belongs in a profile:
+
+```
+scripts\Run-Benchmark.ps1 -Label dlss-test -TuningProfile potato -Set GraphicsSettings.dlssQuality=UltraPerformance
+```
+
+Overrides go through the same range check, backup and manifest as everything else, and `revert`
+still undoes them.
+
+Reported numbers are the average, the 1% low and the 0.1% low, computed from the raw frame times.
+The 1% low is the one to read: it is the mean of the slowest 1% of frames, it is what makes a game
+feel rough, and it moves independently of the average.
+
 ## Status
 
-Working and tested end to end on game version `1.6.0f1 (419.d6c6)`, Unity 2022.3.71f1.
+Working and tested end to end on game version `1.6.0f1 (419.d6c6)`, Unity 2022.3.71f1, and now
+measured — see [docs/FINDINGS.md](docs/FINDINGS.md) for the full table.
+
+The short version, on an RTX 3050 at 1080p: `free` and `traffic` are worth about 5-6% and move the
+1% low not at all. `potato` is worth 62% on the average. The two changes that matter most are not
+in any profile yet — forcing DLSS past the quality level the game picks for itself (+86% average,
++33% on the 1% low) and disabling shadow cascades entirely (+25% on the 1% low).
 
 Not yet done, in rough order of value:
 
-- **Measurement.** Every claim about frame time in this README comes from published analysis, not
-  from a benchmark run by this tool. The profiles are reasoned from the game's own code, but the
-  numbers behind them are not yet measured per-profile. This is the next thing to fix, and until it
-  is, treat the profile tiers as informed hypotheses.
-- A GUI, so this is not a terminal-only tool.
-- Per-entity culling of citizens and oversized props, which settings cannot reach and which needs a
-  real code mod.
+- **Fold the measured wins into the profiles.** The tiers were built from reasoning about the code
+  and the measurements disagree with that reasoning in places. They should be rebuilt around what
+  was measured, not amended around the edges.
+- **Repeat runs.** Every figure is a single run per configuration, so run-to-run variance is
+  unquantified. The ordering is clear; the exact percentages are not.
+- Per-entity culling of citizens and vehicles, which settings cannot reach. `Cs2Saver` implements
+  it and still has not rendered a frame.
+- Other hardware. Everything measured so far is one machine.
 
 ## Licence
 

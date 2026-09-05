@@ -9,4 +9,10 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- WMI is the only way to read configured memory clock and channel population.
+         Not in-box on .NET 8, unlike the registry. -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
 </Project>

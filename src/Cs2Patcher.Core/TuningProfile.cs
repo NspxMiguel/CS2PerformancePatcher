@@ -89,6 +89,7 @@ public static class Profiles
     private const string Water        = "Game.Settings.WaterQualitySettings";
     private const string Terrain      = "Game.Settings.TerrainQualitySettings";
     private const string Texture      = "Game.Settings.TextureQualitySettings";
+    private const string DynamicRes   = "Game.Settings.DynamicResolutionScaleSettings";
 
     /// <summary>
     /// Costs nothing you can see. Every entry here removes work that lands on zero or
@@ -161,7 +162,7 @@ public static class Profiles
             new(Water, "maxTessellationFactor", 4.0, Cost.Cheap, "Water tessellation.", 0, 15),
             new(Water, "tessellationFactorFadeStart", 80.0, Cost.Cheap, "Water detail fades sooner.", 0, 4000),
             new(Water, "tessellationFactorFadeRange", 600.0, Cost.Cheap, "Water detail fades faster.", 10, 4000),
-            new(Terrain, "finalTessellation", 2, Cost.Cheap, "Terrain tessellation."),
+            new(Terrain, "finalTessellation", 2, Cost.Cheap, "Terrain tessellation.", 2, 5),
         ]);
 
     /// <summary>
@@ -192,10 +193,50 @@ public static class Profiles
             new(Clouds, "volumetricCloudsEnabled", false, Cost.Visible, "Flat clouds instead of volumetric."),
 
             new(Texture, "mipbias", 2, Cost.Visible, "Biases toward smaller mips. Softer textures, less VRAM.", 0, 3),
-            new(Terrain, "finalTessellation", 1, Cost.Visible, "Minimum terrain tessellation."),
+            new(Terrain, "finalTessellation", 2, Cost.Visible, "Lowest terrain tessellation the game declares. It refuses to go below 2.", 2, 5),
         ]);
 
-    public static readonly IReadOnlyList<TuningProfile> All = [FreeWins, TrafficSim, Potato];
+    /// <summary>
+    /// The bottom of the ladder, for a machine that has no business opening this game at all.
+    /// Everything here was measured, and every entry is here because it earned its place:
+    /// together they took an RTX 3050 from 22.7 fps to 48.6, and the 1% low from 10.5 to 20.2.
+    ///
+    /// It looks how it sounds. That is the trade being offered, not an accident.
+    /// </summary>
+    public static readonly TuningProfile SuperPotato = new(
+        "super-potato", "Super Potato",
+        "Everything above, pushed to where the game stops looking like itself. Measured +114% average.",
+        [
+            .. Potato.Tweaks,
+
+            // The single largest measured gain on the 1% low: +78% on its own. It is also the
+            // most visible change in the whole tool, because it pulls every LOD transition in
+            // towards the camera — buildings included.
+            new(Lod, "levelOfDetail", 0.1, Cost.Visible,
+                "The lowest LOD scalar the game's own slider allows. Everything switches to its "
+                + "cheap mesh much closer to the camera.", 0.1, 1.0),
+
+            // Worth +33% average and +25% on the 1% low, separately from each other.
+            new(Extra, "cascadeShadowSplitCount", 0, Cost.Visible,
+                "No directional shadow cascades at all. Measured +25% on the 1% low.", 0, 4),
+
+            // At 1080p the game's own Auto picks MaximumQuality and nothing in the UI goes past
+            // it, because the choice is made purely on pixel count. On a card that has the
+            // hardware for it this is the single biggest average-fps lever available.
+            new(GraphicsRoot, "dlssQuality", "UltraPerformance", Cost.Visible,
+                "Forces DLSS past the level the game picks for itself. Ignored on cards without it."),
+
+            // The fallback for everything without DLSS. The game disables dynamic resolution
+            // whenever DLSS is active, so setting both is not a conflict: each machine gets
+            // whichever upscaler it actually has.
+            new(DynamicRes, "enabled", true, Cost.Visible, "Upscaler for cards without DLSS."),
+            new(DynamicRes, "isAdaptive", false, Cost.Visible,
+                "Constant rather than adaptive, so it does not climb back up and cost frames."),
+            new(DynamicRes, "minScale", 0.5, Cost.Visible,
+                "Half resolution per axis — a quarter of the pixels.", 0.5, 1.0),
+        ]);
+
+    public static readonly IReadOnlyList<TuningProfile> All = [FreeWins, TrafficSim, Potato, SuperPotato];
 
     public static TuningProfile? ById(string id) =>
         All.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
