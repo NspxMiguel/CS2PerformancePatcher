@@ -18,6 +18,7 @@ public sealed class MainForm : Form
     private readonly Button _applyButton = new();
     private readonly Button _revertButton = new();
     private readonly Button _tunePcButton = new();
+    private readonly ComboBox _targetBox = new();
     private readonly Button _recommendButton = new();
     private readonly Button _holdUpdateButton = new();
     private readonly TextBox _log = new();
@@ -145,6 +146,15 @@ public sealed class MainForm : Form
         _tunePcButton.Height = 34;
         _tunePcButton.Click += (_, _) => DoTunePc();
 
+        // The target is the question a person actually has: not "which profile" but "how many
+        // frames do I want, and what does that cost me".
+        _targetBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        _targetBox.Width = 150;
+        _targetBox.Items.Add("60 fps on average");
+        foreach (var t in ProfileAdvisor.Targets) _targetBox.Items.Add($"{t.Label}, never dropping");
+        _targetBox.Items.Add("As many as possible");
+        _targetBox.SelectedIndex = 0;
+
         _recommendButton.Text = "Recommend for me";
         _recommendButton.Width = 150;
         _recommendButton.Height = 34;
@@ -159,6 +169,7 @@ public sealed class MainForm : Form
         flow.Controls.Add(_applyButton);
         flow.Controls.Add(_revertButton);
         flow.Controls.Add(_tunePcButton);
+        flow.Controls.Add(_targetBox);
         flow.Controls.Add(_recommendButton);
         flow.Controls.Add(_holdUpdateButton);
 
@@ -290,17 +301,28 @@ public sealed class MainForm : Form
 
     private void DoRecommend()
     {
-        var pick = ProfileAdvisor.Recommend(_hardware);
+        // Index 0 is the loose reading, the last is "as many as possible", and everything
+        // between is one of the advisor's targets under the strict one.
+        var index = _targetBox.SelectedIndex;
+        var last = _targetBox.Items.Count - 1;
+
+        var pick = index switch
+        {
+            0 => ProfileAdvisor.Recommend(_hardware, 60, Criterion.Average),
+            _ when index == last => ProfileAdvisor.Fastest(_hardware),
+            _ => ProfileAdvisor.Recommend(
+                _hardware, ProfileAdvisor.Targets[index - 1].Fps, Criterion.Stable),
+        };
 
         // Select it rather than apply it. A recommendation that patches your game without being
         // asked is not a recommendation.
-        var index = Profiles.All.ToList().FindIndex(p => p.Id == pick.Profile.Id);
-        if (index >= 0) _profileBox.SelectedIndex = index;
+        var row = Profiles.All.ToList().FindIndex(p => p.Id == pick.Profile.Id);
+        if (row >= 0) _profileBox.SelectedIndex = row;
 
         WriteLog($"Recommended: {pick.Profile.Name}",
         [
             pick.Because,
-            $"Expect about {pick.ExpectedFps:N0} fps at normal play speed.",
+            $"Expect about {pick.ExpectedFps:N0} fps on average, {pick.ExpectedLow:N0} on the 1% low.",
             "Press Apply if it looks right.",
         ],
         [

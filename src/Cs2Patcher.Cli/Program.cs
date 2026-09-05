@@ -122,10 +122,17 @@ int List()
 
 int Recommend()
 {
+    if (args.Contains("--targets")) return Targets();
+
+    var wantMax = args.Contains("--max");
+    var stable = args.Contains("--stable");
+
     var target = double.TryParse(GetOption(args, "--fps"), NumberStyles.Float,
         CultureInfo.InvariantCulture, out var parsed) && parsed > 0 ? parsed : (double?)null;
 
-    var pick = ProfileAdvisor.Recommend(hardware, target);
+    var pick = wantMax
+        ? ProfileAdvisor.Fastest(hardware)
+        : ProfileAdvisor.Recommend(hardware, target, stable ? Criterion.Stable : Criterion.Average);
 
     Console.WriteLine($"Recommended:  {pick.Profile.Name}   (cs2patch apply {pick.Profile.Id})");
     Console.WriteLine();
@@ -145,6 +152,41 @@ int Recommend()
         Console.WriteLine("  Install the mod too. Roughly a fifth of every figure above comes from it:");
         Console.WriteLine("    cs2patch install-mod");
     }
+
+    return 0;
+}
+
+int Targets()
+{
+    Console.WriteLine("What this machine can hold, and what each one costs.");
+    Console.WriteLine();
+    Console.WriteLine("  'On average' is the headline number. 'Never dropping' means the slowest 1%");
+    Console.WriteLine("  of frames get there too, which is what people mean by stable and is a much");
+    Console.WriteLine("  harder bar — the tier that averages 61 here has a 1% low of 39.");
+    Console.WriteLine();
+    Console.WriteLine($"  {"target",-10}{"on average",-26}{"never dropping",-26}");
+    Console.WriteLine();
+
+    foreach (var option in ProfileAdvisor.Survey(hardware))
+    {
+        var average = option.OnAverage is { } a
+            ? $"{Truncate(a.Profile.Name, 16),-17}{a.ExpectedFps,5:N0}fps"
+            : "out of reach";
+
+        var stable = option.Stable is { } s
+            ? $"{Truncate(s.Profile.Name, 16),-17}{s.ExpectedLow,5:N0}low"
+            : "out of reach";
+
+        Console.WriteLine($"  {option.Label,-10}{average,-26}{stable,-26}");
+    }
+
+    var fastest = ProfileAdvisor.Fastest(hardware);
+    var most = $"{Truncate(fastest.Profile.Name, 16),-17}{fastest.ExpectedFps,5:N0}fps";
+    var mostLow = $"{Truncate(fastest.Profile.Name, 16),-17}{fastest.ExpectedLow,5:N0}low";
+    Console.WriteLine($"  {"most",-10}{most,-26}{mostLow,-26}");
+    Console.WriteLine();
+    Console.WriteLine($"  Apply one with:  cs2patch apply <id>       See the ids with:  cs2patch list");
+    Console.WriteLine($"  Projected from {ProfileAdvisor.ReferenceMachine}. Yours will differ.");
 
     return 0;
 }
@@ -555,7 +597,8 @@ int Help()
     Console.WriteLine("Usage");
     Console.WriteLine("  cs2patch status              Show the install, your hardware, and patch state");
     Console.WriteLine("  cs2patch list                Show available profiles, what they cost and what they gave");
-    Console.WriteLine("  cs2patch recommend           Pick a profile for this machine (--fps 60 to aim)");
+    Console.WriteLine("  cs2patch recommend           Pick a profile for this machine");
+    Console.WriteLine("  cs2patch recommend --targets What frame rates this machine can hold");
     Console.WriteLine("  cs2patch apply <profile>     Apply a profile (default: traffic)");
     Console.WriteLine("  cs2patch revert              Restore the original settings");
     Console.WriteLine("  cs2patch bench [path]        Compare benchmark runs (default: .research/bench)");
@@ -573,6 +616,7 @@ int Help()
     Console.WriteLine("  --phases                     bench: split each run into paused / speed 1 / speed 3");
     Console.WriteLine("  --spikes                     bench: take the slowest 1% of frames apart");
     Console.WriteLine("  --target <fps>                bench --phases: what share of frames met it (default 60)");
+    Console.WriteLine("  --fps <n> --stable --max      recommend: aim at a number, or at the most frames");
     return 0;
 }
 
