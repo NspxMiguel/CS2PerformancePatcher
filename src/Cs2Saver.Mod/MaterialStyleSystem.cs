@@ -74,16 +74,11 @@ namespace Cs2Saver
         /// afterwards, so the poll backs off to once every ten seconds as soon as the count stops
         /// moving, and a setting change resets it.
         /// </summary>
-        private const int PollWhileLoading = 30;
-        // Ten seconds still cost something: with the settled poll at 600 frames the paused-phase
-        // 1% low sat at 48.6 against 61.8 with the feature off, and a paused phase is 1665 frames
-        // of which the slowest sixteen decide that number -- roughly the number of polls in it.
-        // Thirty seconds is still fast enough to notice a different city being loaded.
-        private const int PollWhenSettled = 1800;
-        private const int PollsToSettle = 5;
+        private const int PollFast = 30;
+        private const int PollSlowest = 3600;
 
         private int m_FramesSincePoll;
-        private int m_StablePolls;
+        private int m_PollInterval = PollFast;
         private bool m_Surveyed;
         private bool m_WantSurvey;
 
@@ -114,8 +109,7 @@ namespace Cs2Saver
             // object and allocates, and this project has already measured what a per-frame sweep
             // costs: five milliseconds of CPU to save one of GPU. Twice a second is far more often
             // than a city gains materials.
-            var interval = m_StablePolls >= PollsToSettle ? PollWhenSettled : PollWhileLoading;
-            var poll = m_Surface != Cs2Saver.Surface.Off && ++m_FramesSincePoll >= interval;
+            var poll = m_Surface != Cs2Saver.Surface.Off && ++m_FramesSincePoll >= m_PollInterval;
             if (poll) m_FramesSincePoll = 0;
 
             if (m_Dirty || poll)
@@ -125,12 +119,19 @@ namespace Cs2Saver
                 if (m_Dirty || live != m_LastMaterialCount)
                 {
                     m_Dirty = false;
-                    m_StablePolls = 0;
+                    m_PollInterval = PollFast;
                     m_LastMaterialCount = live;
                     try { Restyle(); }
                     catch (System.Exception ex) { Mod.Log.Error(ex, "Could not restyle materials."); }
                 }
-                else m_StablePolls++;
+                else
+                {
+                    // Nothing new. Ask half as often, down to once a minute. A fixed interval
+                    // cannot win here: fast enough to catch a city loading is far too fast to run
+                    // while one is being played, and the paused-phase 1% low showed it — 23.6
+                    // against 41.3 with the feature off, which is a stall, not a cost.
+                    m_PollInterval = System.Math.Min(m_PollInterval * 2, PollSlowest);
+                }
             }
 
             if (!m_WantSurvey || m_Surveyed) return;

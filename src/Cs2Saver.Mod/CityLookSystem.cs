@@ -308,9 +308,16 @@ namespace Cs2Saver
             m_Bloom.active = intensity > 0f;
             m_Bloom.intensity.Override(intensity);
 
-            // Scatter is how far the light spreads. High values are soft and expensive-looking;
-            // they are not expensive, the pass costs the same either way.
+            // Scatter is how far the light spreads. High values look soft and expensive; the
+            // spread itself is free, because it is a weighting across mip levels the pass builds
+            // regardless.
             m_Bloom.scatter.Override(0.72f);
+
+            // The pass is not free, though, and it was the whole cost of the look: with it on,
+            // `handsome` fell from 61.4 to 59.1 at play speed, which is the wrong side of sixty.
+            // The low quality level builds fewer mips. On a glow this soft the difference is not
+            // visible and the frames are.
+            m_Bloom.quality.Override((int)ScalableSettingLevelParameter.Level.Low);
 
             // Only the genuinely bright things, so the whole image does not go milky.
             m_Bloom.threshold.Override(0.9f);
