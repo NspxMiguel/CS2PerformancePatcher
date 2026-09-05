@@ -4,6 +4,7 @@ using Cs2Patcher.Core;
 
 var command = args.Length > 0 ? args[0].ToLowerInvariant() : "status";
 var explicitPath = GetOption(args, "--path");
+Text.TrySet(GetOption(args, "--lang"));
 
 Banner();
 
@@ -49,16 +50,16 @@ catch (Exception ex)
 
 int Status()
 {
-    Console.WriteLine("Installation");
-    Console.WriteLine($"  Path          {install.InstallDir}");
-    Console.WriteLine($"  User data     {install.UserDataDir}");
-    Console.WriteLine($"  Game version  {install.GameVersion ?? "unknown"}");
+    Console.WriteLine(Text.Installation);
+    Console.WriteLine($"  {Text.Path,-13} {install.InstallDir}");
+    Console.WriteLine($"  {Text.UserData,-13} {install.UserDataDir}");
+    Console.WriteLine($"  {Text.GameVersion,-13} {install.GameVersion ?? "?"}");
     if (install.BuildId is not null) Console.WriteLine($"  Steam build   {install.BuildId}");
 
     if (hardware is not null)
     {
         Console.WriteLine();
-        Console.WriteLine("Hardware (as the game itself reported it)");
+        Console.WriteLine(Text.HardwareHeading);
         Console.WriteLine($"  GPU           {hardware.Gpu ?? "?"}{(hardware.HasVram ? $" — {hardware.VramMegabytes} MB" : "")}");
         Console.WriteLine($"  CPU           {hardware.Cpu ?? "?"} ({hardware.CoreCount} threads)");
         Console.WriteLine($"  System RAM    {hardware.SystemMemoryGb:N1} GB");
@@ -69,12 +70,12 @@ int Status()
     var manifest = engine.ReadManifest();
     if (manifest is null)
     {
-        Console.WriteLine("Patch status:  NOT PATCHED");
+        Console.WriteLine($"{Text.PatchStatus}:  {Text.NotPatched}");
         Console.WriteLine("  Apply one with:  cs2patch apply traffic");
     }
     else
     {
-        Console.WriteLine($"Patch status:  PATCHED — '{manifest.ProfileName}'");
+        Console.WriteLine($"{Text.PatchStatus}:  {Text.Patched} - '{manifest.ProfileName}'");
         Console.WriteLine($"  Applied at    {manifest.PatchedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}");
         Console.WriteLine($"  Game version  {manifest.GameVersion}");
         Console.WriteLine($"  Changes       {manifest.Applied.Count}");
@@ -93,13 +94,13 @@ int List()
 {
     // Ordered by how good each tier looks, which is not the same as how fast it is: the bottom
     // three are within noise of each other on the machine they were measured on.
-    Console.WriteLine("Profiles, best-looking first.");
+    Console.WriteLine(Text.ProfilesHeading);
     Console.WriteLine();
-    Console.WriteLine("  Tested on   RTX 3050 8GB, Ryzen 5 4600G (12 threads), 16 GB, 1080p");
-    Console.WriteLine("  Measured    normal play speed, with the mod at Declutter Max");
-    Console.WriteLine("  Untouched   26.1 fps, 13.9 1% low, on that machine");
+    Console.WriteLine($"  {Text.TestedOn,-11} {ProfileAdvisor.ReferenceMachine}");
+    Console.WriteLine($"  {Text.MeasuredOn,-11} {Text.MeasuredHow}");
+    Console.WriteLine($"  {Text.UntouchedIs,-11} {Text.UntouchedNumbers}");
     Console.WriteLine();
-    Console.WriteLine("  Your numbers will differ. These are one computer, not a benchmark database.");
+    Console.WriteLine($"  {Text.YoursWillDiffer}");
     Console.WriteLine();
     Console.WriteLine($"  {"",-14} {"",-24}{"fps",6}{"1% low",8}{"at 60",7}{"gain",8}");
 
@@ -110,13 +111,13 @@ int List()
             ? $"{"—",6}{"—",8}{"—",7}{"—",8}"
             : $"{m.Fps,6:N1}{m.OnePercentLow,8:N1}{m.ShareAtSixty,6}%{"+" + m.GainPercent + "%",8}";
 
-        Console.WriteLine($"  {p.Id,-14} {Truncate(p.Name, 23),-24}{numbers}");
-        Console.WriteLine($"                 {p.Description}");
+        Console.WriteLine($"  {p.Id,-14} {Truncate(Text.ProfileName(p), 23),-24}{numbers}");
+        Console.WriteLine($"                 {Text.ProfileDescription(p)}");
         Console.WriteLine();
     }
 
-    Console.WriteLine("  Not sure:    cs2patch recommend            (add --fps 60 to aim at a number)");
-    Console.WriteLine("  Apply with:  cs2patch apply <id>           Undo with:  cs2patch revert");
+    Console.WriteLine($"  {Text.NotSure + ":",-12} cs2patch recommend --targets");
+    Console.WriteLine($"  {Text.ApplyWith + ":",-12} cs2patch apply <id>        {Text.UndoWith}:  cs2patch revert");
     return 0;
 }
 
@@ -134,22 +135,20 @@ int Recommend()
         ? ProfileAdvisor.Fastest(hardware)
         : ProfileAdvisor.Recommend(hardware, target, stable ? Criterion.Stable : Criterion.Average);
 
-    Console.WriteLine($"Recommended:  {pick.Profile.Name}   (cs2patch apply {pick.Profile.Id})");
+    Console.WriteLine($"{Text.Recommended}:  {Text.ProfileName(pick.Profile)}   (cs2patch apply {pick.Profile.Id})");
     Console.WriteLine();
-    Console.WriteLine($"  Why      {pick.Because}");
-    Console.WriteLine($"  Expect   about {pick.ExpectedFps:N0} fps at normal play speed");
-    Console.WriteLine($"  Costs    {pick.Profile.Description}");
+    Console.WriteLine($"  {Text.Why,-8} {pick.Because}");
+    Console.WriteLine($"  {Text.Expect,-8} {Text.ExpectLine(pick.ExpectedFps, pick.ExpectedLow)}");
+    Console.WriteLine($"  {Text.Costs,-8} {Text.ProfileDescription(pick.Profile)}");
     Console.WriteLine();
 
     // Said plainly, because a projection presented as a measurement is worse than no number.
-    Console.WriteLine("  This is an estimate. Every figure in this tool was measured on one machine,");
-    Console.WriteLine("  and yours is placed against it by GPU memory and core count — nothing more.");
-    Console.WriteLine("  To replace it with a real number, install the mod and turn on its frame log.");
+    Console.WriteLine(Text.EstimateWarning);
 
     if (pick.Profile.Id is "handsome" or "skyline" or "potato" or "super-potato" or "mega-potato")
     {
         Console.WriteLine();
-        Console.WriteLine("  Install the mod too. Roughly a fifth of every figure above comes from it:");
+        Console.WriteLine(Text.InstallModToo);
         Console.WriteLine("    cs2patch install-mod");
     }
 
@@ -158,35 +157,33 @@ int Recommend()
 
 int Targets()
 {
-    Console.WriteLine("What this machine can hold, and what each one costs.");
+    Console.WriteLine(Text.TargetsHeading);
     Console.WriteLine();
-    Console.WriteLine("  'On average' is the headline number. 'Never dropping' means the slowest 1%");
-    Console.WriteLine("  of frames get there too, which is what people mean by stable and is a much");
-    Console.WriteLine("  harder bar — the tier that averages 61 here has a 1% low of 39.");
+    Console.WriteLine(Text.TargetsExplainer);
     Console.WriteLine();
-    Console.WriteLine($"  {"target",-10}{"on average",-26}{"never dropping",-26}");
+    Console.WriteLine($"  {Text.ColTarget,-10}{Text.ColOnAverage,-26}{Text.ColNeverDropping,-26}");
     Console.WriteLine();
 
     foreach (var option in ProfileAdvisor.Survey(hardware))
     {
         var average = option.OnAverage is { } a
-            ? $"{Truncate(a.Profile.Name, 16),-17}{a.ExpectedFps,5:N0}fps"
-            : "out of reach";
+            ? $"{Truncate(Text.ProfileName(a.Profile), 16),-17}{a.ExpectedFps,5:N0}fps"
+            : Text.OutOfReach;
 
         var stable = option.Stable is { } s
-            ? $"{Truncate(s.Profile.Name, 16),-17}{s.ExpectedLow,5:N0}low"
-            : "out of reach";
+            ? $"{Truncate(Text.ProfileName(s.Profile), 16),-17}{s.ExpectedLow,5:N0}low"
+            : Text.OutOfReach;
 
         Console.WriteLine($"  {option.Label,-10}{average,-26}{stable,-26}");
     }
 
     var fastest = ProfileAdvisor.Fastest(hardware);
-    var most = $"{Truncate(fastest.Profile.Name, 16),-17}{fastest.ExpectedFps,5:N0}fps";
-    var mostLow = $"{Truncate(fastest.Profile.Name, 16),-17}{fastest.ExpectedLow,5:N0}low";
-    Console.WriteLine($"  {"most",-10}{most,-26}{mostLow,-26}");
+    var most = $"{Truncate(Text.ProfileName(fastest.Profile), 16),-17}{fastest.ExpectedFps,5:N0}fps";
+    var mostLow = $"{Truncate(Text.ProfileName(fastest.Profile), 16),-17}{fastest.ExpectedLow,5:N0}low";
+    Console.WriteLine($"  {Text.Most,-10}{most,-26}{mostLow,-26}");
     Console.WriteLine();
-    Console.WriteLine($"  Apply one with:  cs2patch apply <id>       See the ids with:  cs2patch list");
-    Console.WriteLine($"  Projected from {ProfileAdvisor.ReferenceMachine}. Yours will differ.");
+    Console.WriteLine($"  {Text.ApplyWith}:  cs2patch apply <id>       {Text.SeeIdsWith}:  cs2patch list");
+    Console.WriteLine($"  {Text.ProjectedFrom} {ProfileAdvisor.ReferenceMachine}. {Text.YoursWillDifferShort}");
 
     return 0;
 }
@@ -611,6 +608,7 @@ int Help()
     Console.WriteLine();
     Console.WriteLine("Options");
     Console.WriteLine("  --path <dir>                 Point at the game install explicitly");
+    Console.WriteLine("  --lang pt | --lang en         Force a language (defaults to the system one)");
     Console.WriteLine("  --dll <file>                 Use a specific Cs2Saver.dll build");
     Console.WriteLine("  --set Type.property=value    Push one setting past the profile (repeatable)");
     Console.WriteLine("  --phases                     bench: split each run into paused / speed 1 / speed 3");

@@ -100,7 +100,10 @@ namespace Cs2Saver
                 Setting = new Settings(this);
                 Setting.RegisterInOptionsUI();
 
+                // Both registered; the game serves whichever matches its own language setting, so
+                // there is nothing here to detect and nothing for a player to choose twice.
                 GameManager.instance.localizationManager.AddSource("en-US", new LocaleEN(Setting));
+                GameManager.instance.localizationManager.AddSource("pt-BR", new LocalePT(Setting));
                 AssetDatabase.global.LoadSettings(nameof(Cs2Saver), Setting, new Settings(this));
 
                 // Push whatever was loaded from disk into the live systems, so a returning

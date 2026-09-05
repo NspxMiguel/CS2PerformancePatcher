@@ -104,7 +104,7 @@ public static class ProfileAdvisor
     public static Recommendation Fastest(HardwareInfo? hardware)
     {
         var scale = hardware is null ? 1.0 : SpeedRelativeToReference(hardware, out _);
-        var because = hardware is null ? "Nothing is known about this machine yet." : Describe(hardware);
+        var because = hardware is null ? Text.NothingKnownYet : Describe(hardware);
 
         var profile = Profiles.All.Where(p => p.Measured is not null).MaxBy(p => p.Measured!.Fps)!;
         return new Recommendation(profile, because,
@@ -124,8 +124,7 @@ public static class ProfileAdvisor
             // known, and say that is what happened rather than implying it was chosen.
             var fallback = Profiles.Handsome;
             return new Recommendation(fallback,
-                "Nothing is known about this machine yet — run the game once so it writes a log. "
-                + "This is the tier that reached sixty on the machine this tool was built on.",
+                Text.NothingKnownYet,
                 fallback.Measured!.Fps, fallback.Measured.OnePercentLow);
         }
 
@@ -135,10 +134,7 @@ public static class ProfileAdvisor
         var fastest = Fastest(hardware);
         return fastest with
         {
-            Because = fastest.Because
-                      + $" Nothing here holds {targetFps ?? 60:N0} fps on this machine; the fastest "
-                      + $"tier projects to {fastest.ExpectedFps:N0} average and {fastest.ExpectedLow:N0} "
-                      + "on the 1% low.",
+            Because = fastest.Because + Text.NothingHolds(targetFps ?? 60, fastest.ExpectedFps, fastest.ExpectedLow),
         };
     }
 
@@ -152,7 +148,7 @@ public static class ProfileAdvisor
     {
         var scale = hardware is null ? 1.0 : SpeedRelativeToReference(hardware, out _);
         var because = hardware is null
-            ? "Estimated against the machine this tool was measured on."
+            ? Text.NothingKnownYet
             : Describe(hardware);
 
         foreach (var profile in Profiles.All)
@@ -192,9 +188,7 @@ public static class ProfileAdvisor
 
         if (integrated)
         {
-            because = $"{gpu} is integrated graphics, which shares memory with the CPU and has no "
-                      + "upscaler to fall back on. Estimated at about a third of the machine this "
-                      + "tool was measured on.";
+            because = Text.IntegratedGpu(gpu);
             return 0.35;
         }
 
@@ -209,9 +203,7 @@ public static class ProfileAdvisor
         // The GPU decides most of it, which is what "GPU-bound at every tier" means in practice.
         var scale = Math.Round(vramRatio * 0.75 + cpuRatio * 0.25, 2);
 
-        because = $"{gpu} with {hardware.VramMegabytes} MB and {hardware.CoreCount} threads, "
-                  + $"against the 8 GB and 12 threads everything here was measured on"
-                  + (Math.Abs(scale - 1) < 0.05 ? " — near enough the same machine." : $" — about {scale:N2}x.");
+        because = Text.ComparedToReference(gpu, hardware.VramMegabytes, hardware.CoreCount, scale);
 
         return scale;
     }

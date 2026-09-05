@@ -29,7 +29,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "CS2 Performance Patcher";
+        Text = Cs2Patcher.Core.Text.WindowTitle;
         Size = new Size(760, 660);
         MinimumSize = new Size(680, 560);
         Font = new Font("Segoe UI", 9F);
@@ -65,7 +65,7 @@ public sealed class MainForm : Form
 
     private GroupBox BuildInstallGroup()
     {
-        var browse = new Button { Text = "Browse...", Width = 90, Height = 26, Anchor = AnchorStyles.Right };
+        var browse = new Button { Text = Cs2Patcher.Core.Text.ButtonBrowse, Width = 90, Height = 26, Anchor = AnchorStyles.Right };
         browse.Click += (_, _) => BrowseForInstall();
 
         _pathBox.Width = 560;
@@ -94,14 +94,14 @@ public sealed class MainForm : Form
         layout.Controls.Add(_hardwareLabel, 0, 2);
         layout.SetColumnSpan(_hardwareLabel, 2);
 
-        return new GroupBox { Text = "Game", Dock = DockStyle.Top, AutoSize = true, Controls = { layout } };
+        return new GroupBox { Text = Cs2Patcher.Core.Text.GroupGame, Dock = DockStyle.Top, AutoSize = true, Controls = { layout } };
     }
 
     private GroupBox BuildProfileGroup()
     {
         _profileBox.DropDownStyle = ComboBoxStyle.DropDownList;
         _profileBox.Width = 220;
-        foreach (var p in Profiles.All) _profileBox.Items.Add(p.Name);
+        foreach (var p in Profiles.All) _profileBox.Items.Add(Cs2Patcher.Core.Text.ProfileName(p));
         _profileBox.SelectedIndex = 1; // Traffic Sim
         _profileBox.SelectedIndexChanged += (_, _) => UpdateProfileDescription();
 
@@ -118,7 +118,7 @@ public sealed class MainForm : Form
         layout.Controls.Add(_profileBox);
         layout.Controls.Add(_profileDescription);
 
-        return new GroupBox { Text = "Profile", Dock = DockStyle.Top, AutoSize = true, Controls = { layout } };
+        return new GroupBox { Text = Cs2Patcher.Core.Text.GroupProfile, Dock = DockStyle.Top, AutoSize = true, Controls = { layout } };
     }
 
     private Panel BuildStatusPanel()
@@ -131,17 +131,17 @@ public sealed class MainForm : Form
 
     private Panel BuildButtonRow()
     {
-        _applyButton.Text = "Apply";
+        _applyButton.Text = Cs2Patcher.Core.Text.ButtonApply;
         _applyButton.Width = 130;
         _applyButton.Height = 34;
         _applyButton.Click += (_, _) => DoApply();
 
-        _revertButton.Text = "Revert";
+        _revertButton.Text = Cs2Patcher.Core.Text.ButtonRevert;
         _revertButton.Width = 130;
         _revertButton.Height = 34;
         _revertButton.Click += (_, _) => DoRevert();
 
-        _tunePcButton.Text = "Check my PC";
+        _tunePcButton.Text = Cs2Patcher.Core.Text.ButtonCheckPc;
         _tunePcButton.Width = 130;
         _tunePcButton.Height = 34;
         _tunePcButton.Click += (_, _) => DoTunePc();
@@ -150,17 +150,17 @@ public sealed class MainForm : Form
         // frames do I want, and what does that cost me".
         _targetBox.DropDownStyle = ComboBoxStyle.DropDownList;
         _targetBox.Width = 150;
-        _targetBox.Items.Add("60 fps on average");
-        foreach (var t in ProfileAdvisor.Targets) _targetBox.Items.Add($"{t.Label}, never dropping");
-        _targetBox.Items.Add("As many as possible");
+        _targetBox.Items.Add(Cs2Patcher.Core.Text.TargetAverageSixty);
+        foreach (var t in ProfileAdvisor.Targets) _targetBox.Items.Add(Cs2Patcher.Core.Text.TargetNeverDropping(t.Label));
+        _targetBox.Items.Add(Cs2Patcher.Core.Text.TargetAsManyAsPossible);
         _targetBox.SelectedIndex = 0;
 
-        _recommendButton.Text = "Recommend for me";
+        _recommendButton.Text = Cs2Patcher.Core.Text.ButtonRecommend;
         _recommendButton.Width = 150;
         _recommendButton.Height = 34;
         _recommendButton.Click += (_, _) => DoRecommend();
 
-        _holdUpdateButton.Text = "Hold updates";
+        _holdUpdateButton.Text = Cs2Patcher.Core.Text.ButtonHoldUpdates;
         _holdUpdateButton.Width = 130;
         _holdUpdateButton.Height = 34;
         _holdUpdateButton.Click += (_, _) => DoHoldUpdate();
@@ -291,12 +291,12 @@ public sealed class MainForm : Form
         // The measured line goes first. Somebody choosing between eight tiers wants to know what
         // each one bought before they read what it costs.
         var measured = profile.Measured is { } m
-            ? $"About {m.Fps:N0} fps at normal play speed — +{m.GainPercent}% over untouched, "
-              + $"with {m.ShareAtSixty}% of frames at 60 or better.\r\n"
+            ? Cs2Patcher.Core.Text.ProfileMeasuredLine(m) + "\r\n"
             : string.Empty;
 
-        _profileDescription.Text = measured + $"{profile.Description}\r\n" +
-                                   $"{profile.Tweaks.Count} changes — {free} invisible, {cheap} barely visible, {visible} visible.";
+        _profileDescription.Text = measured
+            + Cs2Patcher.Core.Text.ProfileDescription(profile) + "\r\n"
+            + Cs2Patcher.Core.Text.ChangeCount(profile.Tweaks.Count, free, cheap, visible);
     }
 
     private void DoRecommend()
@@ -319,11 +319,11 @@ public sealed class MainForm : Form
         var row = Profiles.All.ToList().FindIndex(p => p.Id == pick.Profile.Id);
         if (row >= 0) _profileBox.SelectedIndex = row;
 
-        WriteLog($"Recommended: {pick.Profile.Name}",
+        WriteLog($"{Cs2Patcher.Core.Text.Recommended}: {Cs2Patcher.Core.Text.ProfileName(pick.Profile)}",
         [
             pick.Because,
             $"Expect about {pick.ExpectedFps:N0} fps on average, {pick.ExpectedLow:N0} on the 1% low.",
-            "Press Apply if it looks right.",
+            Cs2Patcher.Core.Text.PressApplyIfRight,
         ],
         [
             "This is an estimate. Every figure in this tool was measured on one machine, and "
@@ -352,8 +352,8 @@ public sealed class MainForm : Form
     private void UpdateHoldButtonText()
     {
         _holdUpdateButton.Text = UpdateHold.Read(_install.InstallDir) == UpdatePolicy.OnLaunch
-            ? "Release updates"
-            : "Hold updates";
+            ? Cs2Patcher.Core.Text.ButtonReleaseUpdates
+            : Cs2Patcher.Core.Text.ButtonHoldUpdates;
     }
 
     private void RefreshStatus()
@@ -361,7 +361,7 @@ public sealed class MainForm : Form
         var manifest = _engine?.ReadManifest();
         if (manifest is null)
         {
-            SetStatus("Not patched.", SystemColors.ControlText);
+            SetStatus(Cs2Patcher.Core.Text.NotPatchedShort, SystemColors.ControlText);
             _revertButton.Enabled = false;
             return;
         }
