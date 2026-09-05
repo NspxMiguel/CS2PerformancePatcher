@@ -142,6 +142,16 @@ int Apply()
         Console.WriteLine();
         Console.WriteLine($"  Original saved to  {Path.Combine(install.UserDataDir!, PatchEngine.BackupFolderName)}");
         Console.WriteLine("  Undo any time with:  cs2patch revert");
+
+        // The lower tiers are the ones that end up looking bleached rather than merely simpler,
+        // and the mod's grading costs nothing, so it is worth saying out loud at the moment
+        // somebody has just chosen one.
+        if (profile.Id is "skyline" or "potato" or "super-potato")
+        {
+            Console.WriteLine();
+            Console.WriteLine("  This tier trades looks for frames. The mod's 'Cel' look puts a deliberate");
+            Console.WriteLine("  style back on top for free — turn it on in its options page.");
+        }
     }
 
     return result.Success ? 0 : 1;

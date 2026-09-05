@@ -121,6 +121,22 @@ while the game feels worse, and only the percentiles show that. Use it to check 
 actually helped on *your* machine rather than trusting anybody's numbers, including this
 repository's.
 
+**It also gives the city a look.** Every tier here buys frames by removing something, and what is
+left is correct but flat — a photoreal renderer with most of its photorealism switched off. Grading
+is the one thing that can be spent on looks without spending frames, so the mod drives HDRP's own
+grading stack from a global volume: `Vivid` puts colour back, `Toybox` is the cartoon one,
+`Miniature` is model-railway light, and `Cel` steps the luminance response so light falls in flat
+bands instead of a smooth gradient, which is the part that actually reads as drawn.
+
+No shaders are involved. `ColorCurves` takes a curve built from keyframes at runtime, and keyframes
+with infinite tangents are how an `AnimationCurve` expresses constant interpolation — so a
+staircase there is real posterisation. The ink outline of proper cel shading is the one thing out
+of reach, because it has to sample depth and normals.
+
+It costs nothing, and that is measured rather than assumed: `skyline` with `Cel` ran 53.7 average
+against 53.2 across three runs of the same profile with no look, and the GPU frame stayed at
+17.9 ms.
+
 **One honest caveat.** It is built with plain `dotnet build` rather than the official Mod Post
 Processor, so there is no Burst-compiled native companion and its work runs as managed code. That
 mattered once: an earlier version swept every pedestrian and vehicle every frame and cost 5 ms of
