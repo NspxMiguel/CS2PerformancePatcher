@@ -30,6 +30,8 @@ try
         case "uninstall-mod": return UninstallMod();
         case "bench": return Bench();
         case "tune-pc": return TunePc();
+        case "recommend": return Recommend();
+        case "hold-update": return HoldUpdate();
         case "help" or "--help" or "-h": return Help();
         default:
             Fail($"Unknown command '{command}'.");
@@ -89,21 +91,76 @@ int Status()
 
 int List()
 {
-    Console.WriteLine("Profiles");
+    // Ordered by how good each tier looks, which is not the same as how fast it is: the bottom
+    // two swap places, because the ugliest one measured slower than the tier above it.
+    Console.WriteLine("Profiles, best-looking first. Figures are normal play speed with the mod");
+    Console.WriteLine("installed, on an RTX 3050 / Ryzen 5 4600G at 1080p. Untouched is 26 fps there.");
     Console.WriteLine();
+    Console.WriteLine($"  {"",-14} {"",-24}{"fps",6}{"1% low",8}{"at 60",7}{"gain",8}");
+
     foreach (var p in Profiles.All)
     {
-        var free = p.Tweaks.Count(t => t.Cost == Cost.Free);
-        var cheap = p.Tweaks.Count(t => t.Cost == Cost.Cheap);
-        var visible = p.Tweaks.Count(t => t.Cost == Cost.Visible);
+        var m = p.Measured;
+        var numbers = m is null
+            ? $"{"—",6}{"—",8}{"—",7}{"—",8}"
+            : $"{m.Fps,6:N1}{m.OnePercentLow,8:N1}{m.ShareAtSixty,6}%{"+" + m.GainPercent + "%",8}";
 
-        Console.WriteLine($"  {p.Id,-14} {p.Name}");
+        Console.WriteLine($"  {p.Id,-14} {Truncate(p.Name, 23),-24}{numbers}");
         Console.WriteLine($"                 {p.Description}");
-        Console.WriteLine($"                 {p.Tweaks.Count} changes — {free} free, {cheap} cheap, {visible} visible");
         Console.WriteLine();
     }
-    Console.WriteLine("  Apply with:  cs2patch apply <id>        Undo with:  cs2patch revert");
+
+    Console.WriteLine("  Not sure:    cs2patch recommend            (add --fps 60 to aim at a number)");
+    Console.WriteLine("  Apply with:  cs2patch apply <id>           Undo with:  cs2patch revert");
     return 0;
+}
+
+int Recommend()
+{
+    var target = double.TryParse(GetOption(args, "--fps"), NumberStyles.Float,
+        CultureInfo.InvariantCulture, out var parsed) && parsed > 0 ? parsed : (double?)null;
+
+    var pick = ProfileAdvisor.Recommend(hardware, target);
+
+    Console.WriteLine($"Recommended:  {pick.Profile.Name}   (cs2patch apply {pick.Profile.Id})");
+    Console.WriteLine();
+    Console.WriteLine($"  Why      {pick.Because}");
+    Console.WriteLine($"  Expect   about {pick.ExpectedFps:N0} fps at normal play speed");
+    Console.WriteLine($"  Costs    {pick.Profile.Description}");
+    Console.WriteLine();
+
+    // Said plainly, because a projection presented as a measurement is worse than no number.
+    Console.WriteLine("  This is an estimate. Every figure in this tool was measured on one machine,");
+    Console.WriteLine("  and yours is placed against it by GPU memory and core count — nothing more.");
+    Console.WriteLine("  To replace it with a real number, install the mod and turn on its frame log.");
+
+    if (pick.Profile.Id is "handsome" or "skyline" or "potato" or "super-potato" or "mega-potato")
+    {
+        Console.WriteLine();
+        Console.WriteLine("  Install the mod too. Roughly a fifth of every figure above comes from it:");
+        Console.WriteLine("    cs2patch install-mod");
+    }
+
+    return 0;
+}
+
+int HoldUpdate()
+{
+    var release = args.Contains("--release");
+    var result = UpdateHold.Set(install.InstallDir, hold: !release);
+
+    Console.WriteLine(result.Success ? $"OK — {result.Message}" : $"FAILED — {result.Message}");
+
+    if (result.Success && !release)
+    {
+        Console.WriteLine();
+        Console.WriteLine("  The game still updates when you press Play, which is how Steam works —");
+        Console.WriteLine("  there is no setting that refuses an update outright. What this buys is");
+        Console.WriteLine("  that it will not happen behind your back while the machine is idle.");
+        Console.WriteLine("  Undo with:  cs2patch hold-update --release");
+    }
+
+    return result.Success ? 0 : 1;
 }
 
 int Apply()
@@ -482,11 +539,13 @@ int Help()
 {
     Console.WriteLine("Usage");
     Console.WriteLine("  cs2patch status              Show the install, your hardware, and patch state");
-    Console.WriteLine("  cs2patch list                Show available profiles and what they cost you");
+    Console.WriteLine("  cs2patch list                Show available profiles, what they cost and what they gave");
+    Console.WriteLine("  cs2patch recommend           Pick a profile for this machine (--fps 60 to aim)");
     Console.WriteLine("  cs2patch apply <profile>     Apply a profile (default: traffic)");
     Console.WriteLine("  cs2patch revert              Restore the original settings");
     Console.WriteLine("  cs2patch bench [path]        Compare benchmark runs (default: .research/bench)");
     Console.WriteLine("  cs2patch tune-pc             Report what outside the game is costing you frames");
+    Console.WriteLine("  cs2patch hold-update         Stop Steam updating the game in the background");
     Console.WriteLine();
     Console.WriteLine("The code mod — it loads and runs, but has not yet been shown to pay for itself");
     Console.WriteLine("  cs2patch install-mod         Install the Cs2Saver mod into the local mods folder");

@@ -18,6 +18,8 @@ public sealed class MainForm : Form
     private readonly Button _applyButton = new();
     private readonly Button _revertButton = new();
     private readonly Button _tunePcButton = new();
+    private readonly Button _recommendButton = new();
+    private readonly Button _holdUpdateButton = new();
     private readonly TextBox _log = new();
 
     private GameLocator.GameInstall _install = null!;
@@ -143,10 +145,22 @@ public sealed class MainForm : Form
         _tunePcButton.Height = 34;
         _tunePcButton.Click += (_, _) => DoTunePc();
 
+        _recommendButton.Text = "Recommend for me";
+        _recommendButton.Width = 150;
+        _recommendButton.Height = 34;
+        _recommendButton.Click += (_, _) => DoRecommend();
+
+        _holdUpdateButton.Text = "Hold updates";
+        _holdUpdateButton.Width = 130;
+        _holdUpdateButton.Height = 34;
+        _holdUpdateButton.Click += (_, _) => DoHoldUpdate();
+
         var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, Padding = new Padding(0, 0, 0, 8) };
         flow.Controls.Add(_applyButton);
         flow.Controls.Add(_revertButton);
         flow.Controls.Add(_tunePcButton);
+        flow.Controls.Add(_recommendButton);
+        flow.Controls.Add(_holdUpdateButton);
 
         return new Panel { Dock = DockStyle.Top, AutoSize = true, Controls = { flow } };
     }
@@ -252,6 +266,7 @@ public sealed class MainForm : Form
 
         _applyButton.Enabled = _revertButton.Enabled = true;
         UpdateProfileDescription();
+        UpdateHoldButtonText();
         RefreshStatus();
     }
 
@@ -262,8 +277,61 @@ public sealed class MainForm : Form
         var cheap = profile.Tweaks.Count(t => t.Cost == Cost.Cheap);
         var visible = profile.Tweaks.Count(t => t.Cost == Cost.Visible);
 
-        _profileDescription.Text = $"{profile.Description}\r\n" +
+        // The measured line goes first. Somebody choosing between eight tiers wants to know what
+        // each one bought before they read what it costs.
+        var measured = profile.Measured is { } m
+            ? $"About {m.Fps:N0} fps at normal play speed — +{m.GainPercent}% over untouched, "
+              + $"with {m.ShareAtSixty}% of frames at 60 or better.\r\n"
+            : string.Empty;
+
+        _profileDescription.Text = measured + $"{profile.Description}\r\n" +
                                    $"{profile.Tweaks.Count} changes — {free} invisible, {cheap} barely visible, {visible} visible.";
+    }
+
+    private void DoRecommend()
+    {
+        var pick = ProfileAdvisor.Recommend(_hardware);
+
+        // Select it rather than apply it. A recommendation that patches your game without being
+        // asked is not a recommendation.
+        var index = Profiles.All.ToList().FindIndex(p => p.Id == pick.Profile.Id);
+        if (index >= 0) _profileBox.SelectedIndex = index;
+
+        WriteLog($"Recommended: {pick.Profile.Name}",
+        [
+            pick.Because,
+            $"Expect about {pick.ExpectedFps:N0} fps at normal play speed.",
+            "Press Apply if it looks right.",
+        ],
+        [
+            "This is an estimate. Every figure in this tool was measured on one machine, and "
+            + "yours is placed against it by GPU memory and core count, nothing more.",
+        ]);
+    }
+
+    private void DoHoldUpdate()
+    {
+        var holding = UpdateHold.Read(_install.InstallDir) == UpdatePolicy.OnLaunch;
+        var result = UpdateHold.Set(_install.InstallDir, hold: !holding);
+
+        var notes = new List<string>();
+        if (result.Success && !holding)
+        {
+            notes.Add("Steam still updates when you press Play; nothing can refuse an update "
+                      + "outright. What this stops is it happening while the machine is idle.");
+        }
+
+        WriteLog(result.Success ? $"OK — {result.Message}" : $"Failed — {result.Message}",
+            notes, []);
+
+        UpdateHoldButtonText();
+    }
+
+    private void UpdateHoldButtonText()
+    {
+        _holdUpdateButton.Text = UpdateHold.Read(_install.InstallDir) == UpdatePolicy.OnLaunch
+            ? "Release updates"
+            : "Hold updates";
     }
 
     private void RefreshStatus()

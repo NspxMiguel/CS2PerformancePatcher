@@ -57,7 +57,31 @@ public sealed record Tweak(
     }
 }
 
-public sealed record TuningProfile(string Id, string Name, string Description, IReadOnlyList<Tweak> Tweaks);
+/// <summary>
+/// What a profile actually did, on the one machine this project has been able to measure.
+///
+/// All three figures are the benchmark's speed-1 phase — normal play — with the mod installed at
+/// Declutter Max, because that is the configuration the tool recommends and quoting anything else
+/// would be quoting a number nobody runs. The whole-run average of the same benchmark reads about
+/// fifteen percent lower, because it spends 35 of its 90 seconds at triple simulation speed.
+/// </summary>
+/// <param name="Fps">Average frames per second.</param>
+/// <param name="OnePercentLow">Mean of the slowest 1% of frames, as a rate.</param>
+/// <param name="ShareAtSixty">Percentage of frames that met 60 fps.</param>
+public sealed record Measured(double Fps, double OnePercentLow, int ShareAtSixty)
+{
+    /// <summary>Untouched settings with the mod off: 26.1 fps at play speed.</summary>
+    public const double StockFps = 26.1;
+
+    public int GainPercent => (int)Math.Round((Fps - StockFps) / StockFps * 100);
+}
+
+public sealed record TuningProfile(
+    string Id,
+    string Name,
+    string Description,
+    IReadOnlyList<Tweak> Tweaks,
+    Measured? Measured = null);
 
 /// <summary>
 /// The built-in profiles.
@@ -122,7 +146,8 @@ public static class Profiles
             // nobody attributes to clouds.
             new(Clouds, "distanceCloudsShadows", false, Cost.Free,
                 "Distant cloud shadows cost a pass for an effect that reads as ambient shading."),
-        ]);
+        ],
+        new Measured(36.7, 22.2, 0));
 
     /// <summary>
     /// The city stays sharp and legible; the things you never zoom into stop being
@@ -164,7 +189,8 @@ public static class Profiles
             new(Water, "tessellationFactorFadeStart", 80.0, Cost.Cheap, "Water detail fades sooner.", 0, 4000),
             new(Water, "tessellationFactorFadeRange", 600.0, Cost.Cheap, "Water detail fades faster.", 10, 4000),
             new(Terrain, "finalTessellation", 2, Cost.Cheap, "Terrain tessellation.", 2, 5),
-        ]);
+        ],
+        new Measured(37.5, 23.0, 0));
 
     /// <summary>
     /// Everything that is not the city itself.
@@ -207,7 +233,8 @@ public static class Profiles
             // buy by making the image worse.
             new(GraphicsRoot, "dlssQuality", "Balanced", Cost.Cheap,
                 "Forces DLSS past the level the game picks for itself. Ignored on cards without it."),
-        ]);
+        ],
+        new Measured(48.4, 27.8, 4));
 
     /// <summary>
     /// A sharp city that actually runs. The tier this project was aiming at.
@@ -266,7 +293,8 @@ public static class Profiles
             // finishes at 17ms is presented at 20.8ms on a 240Hz panel. Measured +4%.
             new(GraphicsRoot, "vSync", false, Cost.Cheap,
                 "Stops every frame waiting for the next refresh. May tear; the game ships it off."),
-        ]);
+        ],
+        new Measured(59.9, 33.0, 60));
 
     /// <summary>
     /// For hardware that has no business running this game. Trades looks for frames,
@@ -277,7 +305,7 @@ public static class Profiles
     /// the mip bias and the terrain cuts are doing work that no amount of reconstruction can.</para>
     /// </summary>
     public static readonly TuningProfile Potato = new(
-        "potato", "Potato",
+        "potato", "Old Laptop",
         "Everything above, plus visible cuts. For hardware well under the game's requirements.",
         [
             .. TrafficSim.Tweaks,
@@ -311,7 +339,8 @@ public static class Profiles
             // See the note on the same tweak in Skyline. Worth +4% and the game's own default.
             new(GraphicsRoot, "vSync", false, Cost.Cheap,
                 "Stops every frame waiting for the next refresh. May tear; the game ships it off."),
-        ]);
+        ],
+        new Measured(58.1, 35.7, 56));
 
     /// <summary>
     /// The bottom of the ladder, for a machine that has no business opening this game at all.
@@ -321,7 +350,7 @@ public static class Profiles
     /// It looks how it sounds. That is the trade being offered, not an accident.
     /// </summary>
     public static readonly TuningProfile SuperPotato = new(
-        "super-potato", "Super Potato",
+        "super-potato", "Microwave",
         "Everything above, pushed to where the game stops looking like itself. Measured +126% average.",
         [
             .. Potato.Tweaks,
@@ -358,7 +387,8 @@ public static class Profiles
             // waiting on the CPU instead — which is the whole story of this profile's ceiling.
             new(Shadows, "enabled", false, Cost.Visible,
                 "No sun shadows at all. The city reads flat; this tier gave up looking right."),
-        ]);
+        ],
+        new Measured(77.8, 42.7, 95));
 
     /// <summary>
     /// Sixty frames without looking like it cost anything, which is a different goal from every
@@ -402,7 +432,8 @@ public static class Profiles
             new(Lod, "levelOfDetail", 0.35, Cost.Cheap,
                 "The game's own Low preset rather than the floor, so buildings keep their outline.",
                 0.1, 1.0),
-        ]);
+        ],
+        new Measured(61.4, 39.2, 67));
 
     /// <summary>
     /// Below the bottom. For hardware where the question is whether the game runs at all.
@@ -412,7 +443,7 @@ public static class Profiles
     /// the game offers, no clouds of any kind, and no fog.
     /// </summary>
     public static readonly TuningProfile MegaPotato = new(
-        "mega-potato", "Mega Potato",
+        "mega-potato", "If It Opened, It Runs",
         "Everything below super-potato that was left alone for being too ugly to be worth it.",
         [
             .. SuperPotato.Tweaks,
@@ -427,7 +458,8 @@ public static class Profiles
                 "No atmospheric fog. Distance stops reading as distance."),
 
             new(Water, "maxTessellationFactor", 0.0, Cost.Visible, "Flat water.", 0, 15),
-        ]);
+        ],
+        new Measured(75.8, 39.8, 92));
 
     public static readonly IReadOnlyList<TuningProfile> All =
         [FreeWins, TrafficSim, SharpCity, Handsome, Skyline, Potato, SuperPotato, MegaPotato];
