@@ -137,8 +137,12 @@ namespace Cs2Saver
                 _ => RenderBudget.Off,
             };
 
-            // Foliage is the player's call, so it overrides whatever the preset had in mind.
-            budget.TreeHalvings = (byte)Greenery;
+            // Foliage is the player's call, so it overrides whatever the preset had in mind --
+            // but only while there is a preset. Applied unconditionally, as it was, it meant a
+            // player who set the preset to Off still had their trees culled to an eighth of their
+            // distance, because this line ran on RenderBudget.Off as happily as on any other. Off
+            // has to mean off; that is the whole basis for trusting anything else on this page.
+            if (Preset != BudgetPreset.Off) budget.TreeHalvings = (byte)Greenery;
 
             if (Mod.BudgetSystem != null) Mod.BudgetSystem.Budget = budget;
 

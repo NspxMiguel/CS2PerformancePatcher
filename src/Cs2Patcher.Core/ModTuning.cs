@@ -27,6 +27,8 @@ public static class ModTuning
 
     public sealed record Result(bool Written, string? Message);
 
+    private static string ModMissingNote => Text.ModShadowNeedsMod;
+
     /// <summary>
     /// Applies whatever <paramref name="profile"/> asks of the mod.
     ///
@@ -38,7 +40,14 @@ public static class ModTuning
         if (profile.ModShadowReach is null) return new Result(false, null);
 
         var path = SettingsPath(userDataDir);
-        if (!File.Exists(path)) return new Result(false, null); // mod not installed, or never run
+        if (!File.Exists(path))
+        {
+            // Worth saying out loud rather than passing over in silence. This profile switched the
+            // sun's shadow on, and without the mod to bound its distance that decision costs six
+            // frames per second instead of one -- which is the difference between a tier that
+            // makes its claim and one that does not.
+            return new Result(false, ModMissingNote);
+        }
 
         try
         {

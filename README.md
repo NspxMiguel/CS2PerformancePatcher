@@ -50,34 +50,48 @@ Every bound the patcher enforces was read out of the game's own `[SettingsUISlid
 
 ## Profiles
 
-| Profile        | What it costs you | At play speed |
-|----------------|-------------------|---------------|
-| `free`         | Nothing you can see. Removes work that produces no visible pixels. | 35 |
-| `traffic`      | Effects you do not look at. City and traffic stay sharp. | 36 |
-| `sharp`        | Every screen-space effect. Geometry and textures completely untouched. | 47 |
-| `handsome`     | Shadows and the clutter. Sharp textures, sharp edges. **Start here.** | **58** |
-| `skyline`      | The same, trading internal resolution for a sharper city. | 58 |
-| `potato`       | Visible cuts, including blurry textures. For machines with no upscaler. | 55 |
-| `super-potato` | Everything, including the internal resolution. Jagged, and fast. | 72 |
-| `mega-potato`  | Below that. Two thirds of the resolution. | 74 |
-| `bone-dry`     | Half the resolution. Nothing below this exists. | 73 |
+| Profile        | What it costs you | fps | 1% low | at 60 |
+|----------------|-------------------|-----|--------|-------|
+| *(untouched)*  | The game as it ships, mod off. | 26.1 | 14.0 | 0% |
+| `free`         | Nothing you can see. Removes work that produces no visible pixels. | 41.5 | 26.3 | 0% |
+| `traffic`      | Effects you do not look at. City and traffic stay sharp. | 42.4 | 26.7 | 0% |
+| `sharp`        | Every screen-space effect. Geometry and textures completely untouched. | 50.2 | 28.4 | 7% |
+| `potato`       | Visible cuts, including blurry textures. For machines with no upscaler. | 56.7 | 31.2 | 48% |
+| `skyline`      | Sharper buildings, at the cost of internal resolution. | 56.7 | 29.7 | 46% |
+| `handsome`     | **The only one with the sun's shadow on. Start here.** | **60.8** | **31.7** | **67%** |
+| `super-potato` | Everything, including the internal resolution. Jagged, and fast. | 70.4 | 33.8 | 89% |
+| `mega-potato`  | Below that. Two thirds of the resolution. | 71.2 | 29.9 | 89% |
+| `bone-dry`     | Half the resolution. Nothing below this exists. | 72.1 | 36.7 | 89% |
 
-Figures are the speed-1 phase — normal play — with the mod installed at Declutter Max and its
-foliage on the default, on the machine in [docs/FINDINGS.md](docs/FINDINGS.md). Untouched is 27.7
-there. Roughly a fifth of every one of them comes from the mod.
+Figures are the speed-1 phase — normal play — with the mod installed at Declutter, its greenery on
+Full, the Showroom look and Matte surfaces, on the machine in
+[docs/FINDINGS.md](docs/FINDINGS.md). The whole table is one session of back-to-back runs, because
+comparing runs taken hours apart compares the machine's mood as much as the settings.
 
-**`handsome` is the one to use.** It is built by starting from the fastest tier and spending its
-whole surplus on the image: 1114x627 internal instead of 640x360, full-resolution textures, and
-the game's own Low geometry rather than the LOD floor. Fifty-eight frames at play speed with 53%
-of frames at sixty or better, and not one below thirty.
+**`handsome` is the one to use, and it is the only tier here with the sun's shadow on.** Every
+other profile buys its frames partly by switching that shadow off, and matched photographs of the
+same benchmark frame are what showed why that is a bad trade: a city with no shadow and no ambient
+occlusion is not a stylised city, it is a flat one — grass with no texture, buildings with no
+volume, trees pasted onto the ground. Turning both back on cost 2.1 frames per second. Finding
+those frames again cost one shopfront's window frames and an upscaler step that a 1:1 crop cannot
+resolve. That is the whole design of the tier.
 
-**Two of those frames are in the trees.** The mod's foliage setting defaults to keeping the city
-green; set it to Thin and the same profile measures 61.4 with 67% of frames at sixty. A city
-without trees in it is a different thing from a city with a lower frame rate, so that choice is a
-setting rather than something decided here.
+It needs the mod for it. Turning the sun's shadow on is a game setting, and bounding how far it
+reaches is an HDRP volume parameter the game never exposes — bounded to a block it costs 0.9 fps,
+unbounded it costs 6.0. So `cs2patch apply handsome` writes the mod's reach setting too, and tells
+you if the mod is not installed.
 
-Coming at it from the other end does not work. `sharp` with the mod running measures 47, and there
-is nothing left in it to cut that is not the city itself.
+Coming at it from the other end does not work. `sharp` with the mod running measures 50 and there
+is nothing left in it to cut that is not the city itself, which is why this tier is built by
+starting from the fastest one and spending its surplus on the image instead.
+
+**One number worth reading twice.** With no profile applied at all — the game exactly as it ships —
+installing the mod and setting nothing but the shadow reach to Block takes it from **26.1 fps to
+32.2, and its 1% low from 14.0 to 23.4.** That is a 23% average and a 67% improvement in the frames
+you actually feel, for one setting, on an unpatched game, and the only thing that changes on screen
+is that shadows stop being drawn more than a hundred metres from the camera. It is the largest
+single-knob result in this project and it is not a settings change, because no settings file can
+reach it.
 
 Each change is tagged `Free`, `Cheap`, or `Visible`, and `cs2patch apply` prints every one with its
 before and after value. Nothing happens that you cannot see happening.

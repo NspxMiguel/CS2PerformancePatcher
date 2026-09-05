@@ -79,12 +79,12 @@ public static class Text
     public static string UntouchedIs => P("Untouched", "Sem alterar");
 
     public static string MeasuredHow => P(
-        "normal play speed, with the mod at Declutter Max",
-        "velocidade normal de jogo, com o mod em Limpeza máxima");
+        "normal play speed, mod at Declutter with full greenery, one session",
+        "velocidade normal de jogo, mod em Limpeza com vegetação Cheia, uma sessão só");
 
     public static string UntouchedNumbers => P(
-        "26.1 fps, 13.9 1% low, on that machine",
-        "26,1 fps, 13,9 de 1% low, naquela máquina");
+        "26.1 fps, 14.0 1% low — the mean of three runs that spread 0.2",
+        "26,1 fps, 14,0 de 1% low — média de três runs que variaram 0,2");
 
     public static string YoursWillDiffer => P(
         "Your numbers will differ. These are one computer, not a benchmark database.",
@@ -115,12 +115,19 @@ public static class Text
     public static string OutOfReach => P("out of reach", "fora de alcance");
     public static string Most => P("most", "máximo");
 
+    public static string ModShadowNeedsMod => P(
+        "This profile turns the sun's shadow back on. Without Cs2Saver to bound how far it "
+        + "reaches, that costs about six frames per second instead of one. Install it with "
+        + "'cs2patch install-mod'.",
+        "Este perfil religa a sombra do sol. Sem o Cs2Saver para limitar até onde ela chega, "
+        + "isso custa uns seis quadros por segundo em vez de um. Instale com "
+        + "'cs2patch install-mod'.");
+
     public static string FoliageNote => P(
-        "  Handsome misses sixty by two frames, and both are in the trees: the mod's foliage\n"
-        + "  setting defaults to keeping the city green, and Thin puts them back (61 fps, 67%).",
-        "  O Handsome perde os sessenta por dois quadros, e os dois estao nas arvores: a opcao\n"
-        + "  de vegetacao do mod vem no padrao que mantem a cidade verde, e Rala devolve\n"
-        + "  esses quadros (61 fps, 67%).");
+        "  Handsome makes sixty with the sun's shadow on, which nothing here did before. It\n"
+        + "  needs the mod: shadows bounded to a block cost 1 fps, unbounded they cost 6.",
+        "  O Bonito bate sessenta com a sombra do sol ligada, o que nada aqui fazia antes.\n"
+        + "  Ele depende do mod: a sombra limitada a um quarteirao custa 1 fps, solta custa 6.");
 
     public static string ProjectedFrom => P("Projected from", "Projetado a partir de");
     public static string YoursWillDifferShort => P("Yours will differ.", "O seu vai diferir.");

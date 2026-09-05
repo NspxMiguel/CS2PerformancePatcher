@@ -61,24 +61,40 @@ public sealed record Tweak(
 /// What a profile actually did, on the one machine this project has been able to measure.
 ///
 /// All three figures are the benchmark's speed-1 phase — normal play — with the mod installed at
-/// Declutter Max and its foliage setting on the default, because that is the configuration the
-/// tool recommends and quoting anything else would be quoting a number nobody runs. The whole-run
-/// average of the same benchmark reads about fifteen percent lower, because it spends 35 of its
-/// 90 seconds at triple simulation speed.
+/// Declutter, its greenery on Full, the Showroom look and Matte surfaces, because that is the
+/// configuration the tool recommends and quoting anything else would be quoting a number nobody
+/// runs. Every figure in the table comes from a single session of back-to-back runs.
 ///
-/// <para><b>The foliage default is worth knowing about, because it moves these by three frames.</b>
-/// An earlier version of this table was measured with the mod cutting trees to a sixteenth of
-/// their distance, which is fast and leaves flat fields where a forest was. The default is now an
-/// eighth, and every figure here dropped by about 5% when it changed. Setting foliage to Thin puts
-/// those frames back, and the mod's own label says so.</para>
+/// <para><b>Two different averages of the same run exist and they are far apart</b>, which cost an
+/// afternoon once. <c>cs2patch bench</c> reports the whole 90 seconds; these report the speed-1
+/// phase. The benchmark spends 35 of its 90 seconds at triple simulation speed, where the
+/// simulation is the ceiling and the frame rate is around 38 whatever the graphics settings are,
+/// so the whole-run average reads about fifteen percent lower. Comparing one against the other
+/// will always look like a regression.</para>
+///
+/// <para><b>Two mod settings move these by more than a frame each</b> and both were chosen from
+/// photographs. Greenery on Full rather than Balanced costs about a frame and is what keeps a
+/// suburb wooded; Declutter rather than Declutter Max costs 1.2 and is what keeps the markings on
+/// a sports field. Both labels in the mod say what they cost, so a player who wants those frames
+/// back can take them.</para>
 /// </summary>
 /// <param name="Fps">Average frames per second.</param>
 /// <param name="OnePercentLow">Mean of the slowest 1% of frames, as a rate.</param>
 /// <param name="ShareAtSixty">Percentage of frames that met 60 fps.</param>
 public sealed record Measured(double Fps, double OnePercentLow, int ShareAtSixty)
 {
-    /// <summary>Untouched settings with the mod off: 27.7 fps at play speed.</summary>
-    public const double StockFps = 27.7;
+    /// <summary>
+    /// Untouched settings with the mod off, at play speed: the denominator under every percentage
+    /// this tool prints.
+    ///
+    /// <para>Measured three times back to back rather than once, because it is the number every
+    /// claim divides by. The three runs came back 26.2, 26.0 and 26.0 — a spread of 0.2, which is
+    /// tighter than anything else in this project and a useful thing to know: when two runs of the
+    /// same thing differ by more than that, the configuration differed, not the machine. Twice
+    /// during this project a "stock" run measured well above this, and both times it turned out
+    /// the mod had been left switched on.</para>
+    /// </summary>
+    public const double StockFps = 26.1;
 
     public int GainPercent => (int)Math.Round((Fps - StockFps) / StockFps * 100);
 }
@@ -174,7 +190,7 @@ public static class Profiles
             new(Clouds, "distanceCloudsShadows", false, Cost.Free,
                 "Distant cloud shadows cost a pass for an effect that reads as ambient shading."),
         ],
-        new Measured(35.1, 19.3, 0));
+        new Measured(41.5, 26.3, 0));
 
     /// <summary>
     /// The city stays sharp and legible; the things you never zoom into stop being
@@ -217,7 +233,7 @@ public static class Profiles
             new(Water, "tessellationFactorFadeRange", 600.0, Cost.Cheap, "Water detail fades faster.", 10, 4000),
             new(Terrain, "finalTessellation", 2, Cost.Cheap, "Terrain tessellation.", 2, 5),
         ],
-        new Measured(36.1, 21.1, 0));
+        new Measured(42.4, 26.7, 0));
 
     /// <summary>
     /// Everything that is not the city itself.
@@ -261,7 +277,7 @@ public static class Profiles
             new(GraphicsRoot, "dlssQuality", "Balanced", Cost.Cheap,
                 "Forces DLSS past the level the game picks for itself. Ignored on cards without it."),
         ],
-        new Measured(47.0, 25.8, 2));
+        new Measured(50.2, 28.4, 7));
 
     /// <summary>
     /// A sharp city that actually runs. The tier this project was aiming at.
@@ -321,7 +337,7 @@ public static class Profiles
             new(GraphicsRoot, "vSync", false, Cost.Cheap,
                 "Stops every frame waiting for the next refresh. May tear; the game ships it off."),
         ],
-        new Measured(58.3, 31.8, 54));
+        new Measured(56.7, 29.7, 46));
 
     /// <summary>
     /// For hardware that has no business running this game. Trades looks for frames,
@@ -367,7 +383,7 @@ public static class Profiles
             new(GraphicsRoot, "vSync", false, Cost.Cheap,
                 "Stops every frame waiting for the next refresh. May tear; the game ships it off."),
         ],
-        new Measured(55.1, 30.5, 48));
+        new Measured(56.7, 31.2, 48));
 
     /// <summary>
     /// The bottom of the ladder, for a machine that has no business opening this game at all.
@@ -415,7 +431,7 @@ public static class Profiles
             new(Shadows, "enabled", false, Cost.Visible,
                 "No sun shadows at all. The city reads flat; this tier gave up looking right."),
         ],
-        new Measured(72.4, 36.2, 91));
+        new Measured(70.4, 33.8, 89));
 
     /// <summary>
     /// Sixty frames without looking like it cost anything, which is a different goal from every
@@ -427,45 +443,61 @@ public static class Profiles
     /// instead, which has fourteen frames of headroom over the target, and spends every one of
     /// them on the image.</para>
     ///
+    ///
     /// <para>What it buys back, in the order the eye notices:</para>
     /// <list type="bullet">
-    /// <item>The upscaler goes from a 640x360 internal render to 1114x627. This is the whole
-    /// reason the bottom tiers look jagged, and it is not a subtle difference — a third of the
-    /// resolution reconstructed is exactly what an edge stepping down a roofline looks like.</item>
+    /// <item><b>The sun's shadow and ambient occlusion.</b> This is the one that mattered and it
+    /// took photographs to see. Every tier below switches both off, and matched captures of the
+    /// same benchmark frame against stock said plainly what four hundred benchmark rows had not:
+    /// a city with neither is not a stylised city, it is a flat one. Grass with no texture,
+    /// buildings with no volume, trees pasted onto the ground.</item>
     /// <item>Textures come back to full resolution. Mip bias 2 is not a soft look, it is a muddy
     /// one, and it never made the game faster here in a way worth measuring.</item>
-    /// <item>Geometry goes from the LOD floor to the game's own Low preset, so buildings keep
-    /// their silhouettes.</item>
+    /// <item>Geometry goes to twice the LOD floor, so buildings keep their silhouettes.</item>
     /// </list>
     ///
-    /// <para>Measured 58.1 at normal play speed with 53% of frames at sixty or better and not one
-    /// under thirty, against 72.4 for the tier it is built on. Fourteen frames traded for three
-    /// times the internal resolution and sharp textures, which is the best exchange rate anywhere
-    /// on this ladder.</para>
+    /// <para>Measured 60.5 at normal play speed with a 32.7 1% low, 64% of frames at sixty or
+    /// better and not one under thirty, against 68.5 for the tier it is built on. Eight frames
+    /// for the difference between a city and a diagram of one.</para>
     ///
-    /// <para>It is two frames short of sixty on that default, and the two frames are in the trees:
-    /// with the mod's foliage set to Thin the same profile measures 61.4. That trade is left to
-    /// the player rather than folded in here, because a city without trees in it is a different
-    /// thing from a city with a lower frame rate and only one person can say which they want.</para>
+    /// <para><b>The shadow is only affordable with the mod installed.</b> Turning it on is a game
+    /// setting; bounding how far it reaches is an HDRP volume parameter the game never exposes.
+    /// Bounded to a hundred metres it costs 0.9 fps and unbounded it costs 6.0, so applying this
+    /// profile also writes the mod's reach setting, and says so when the mod is not there.</para>
+    ///
+    /// <para>Two earlier versions of this tier are worth knowing about, because both were tried
+    /// and both lost on a photograph rather than on a number. A 1114x627 internal render instead
+    /// of 960x540 cost 2.0 fps and could not be told apart in a 1:1 crop — by this tier the frame
+    /// is draw calls, not pixels. And LOD 0.35 instead of 0.2 cost 4.5 fps to keep the window
+    /// frames on one shopfront at street level, which is the entire margin between making sixty
+    /// and missing it.</para>
     /// </summary>
     public static readonly TuningProfile Handsome = new(
         "handsome", "Handsome",
         "Sixty frames that do not look like sixty frames cost anything. Full-resolution textures, "
-        + "the game's own Low geometry, three times the internal resolution of the tier below, and "
-        + "-- the thing that separates this tier from the rest -- the sun's shadow and ambient "
-        + "occlusion back, because a city with neither is not stylised, it is flat.",
+        + "twice the geometry of the tier below, and -- the thing that separates this tier from "
+        + "every other one here -- the sun's shadow and ambient occlusion back on, because a city "
+        + "with neither is not stylised, it is flat.",
         [
             .. SuperPotato.Tweaks,
 
-            new(GraphicsRoot, "dlssQuality", "Balanced", Cost.Cheap,
-                "1114x627 internal instead of 640x360. This is what stops edges stepping."),
+            // Not Balanced, and that is a measurement rather than a preference. Balanced renders
+            // 1114x627 against MaximumPerformance's 960x540, and buying those pixels back cost
+            // 2.0 fps here while buying the same 2.0 back from the geometry cost far less that
+            // anyone could see. By this tier the frame is draw calls, not pixels.
+            new(GraphicsRoot, "dlssQuality", "MaximumPerformance", Cost.Cheap,
+                "960x540 internal. Past this tier, pixels are not where the frames are."),
 
             new(Texture, "mipbias", 0, Cost.Cheap,
                 "Full-resolution textures. Mip bias is a muddy look, not a soft one.", 0, 3),
 
-            new(Lod, "levelOfDetail", 0.35, Cost.Cheap,
-                "The game's own Low preset rather than the floor, so buildings keep their outline.",
-                0.1, 1.0),
+            // Twice the game's own floor, and two thirds of its Low preset. 0.35 was tried and
+            // photographed against this: it holds window frames on a shopfront at street level
+            // and costs 4.5 fps for them, which is the whole margin between this tier making its
+            // sixty and missing it. The shopfront lost the argument.
+            new(Lod, "levelOfDetail", 0.2, Cost.Cheap,
+                "Twice the game's floor. Buildings keep their outline; the nearest few lose some "
+                + "window detail.", 0.1, 1.0),
 
             // Bought back from SuperPotato, which switches both off. Photographs of the same
             // benchmark frame with and without settled it: a city with no sun shadow and no
@@ -503,7 +535,7 @@ public static class Profiles
             new(Ssao, "maxPixelRadius", 24, Cost.Cheap, "Contact shading, not a global darkening.",
                 16, 256),
         ],
-        new Measured(57.1, 29.3, 51),
+        new Measured(60.8, 31.7, 67),
 
         // Bounded to a hundred metres by the mod, without which the shadows above cost six frames
         // per second instead of one. Street level is the only place a shadow is looked at.
@@ -549,7 +581,7 @@ public static class Profiles
 
             new(Water, "maxTessellationFactor", 0.0, Cost.Visible, "Flat water.", 0, 15),
         ],
-        new Measured(74.2, 37.1, 91),
+        new Measured(71.2, 29.9, 89),
         ScreenScale: 0.67);
 
     /// <summary>
@@ -565,7 +597,7 @@ public static class Profiles
         "Half the resolution per axis, on top of everything else being at its floor. Nothing "
         + "below this exists, because there is nothing left to turn down.",
         [.. MegaPotato.Tweaks],
-        new Measured(73.3, 35.5, 89),
+        new Measured(72.1, 36.7, 89),
         ScreenScale: 0.5);
 
     public static readonly IReadOnlyList<TuningProfile> All =

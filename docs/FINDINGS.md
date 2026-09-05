@@ -824,3 +824,89 @@ Run-to-run spread on the same configuration is about 0.3 fps at play speed, whic
 caveat above already said. Nothing has drifted. Every A/B in this document compares play-speed
 figures against a control taken in the same session; comparing a `bench` row against a `Measured`
 value compares two different things and will always look like a regression.
+
+## Sixty frames with the shadows on
+
+The tier called `handsome` promises "sixty frames that do not look like sixty frames cost
+anything" and had never once measured sixty. With the sun's shadow and ambient occlusion added
+back it measured 54.3, which is further away, not closer. Finding the eight frames took three runs
+and both of them were spent somewhere unexpected.
+
+**The pixels were not where the frames were.** Dropping the upscaler from Balanced (1114x627
+internal) to MaximumPerformance (960x540) bought 2.0 fps, and a 1:1 crop of the same frame could
+not tell the two apart. That is consistent with what the tiers below already say — below
+`super-potato`, cutting 63% of the pixels moved the GPU frame by 3% — but it is the first time it
+has been true this high up the ladder.
+
+**The geometry was.** LOD 0.35, the game's own Low preset, against 0.2 bought 4.5 fps. In a 1:1
+crop the difference is one shopfront at street level losing the frames around its windows and a
+few near buildings simplifying; silhouettes and the skyline are untouched, because the mod's
+prefab floor is what governs those and it is not involved here.
+
+| | avg fps | 1% low | at 60 | never below 30 |
+|---|---|---|---|---|
+| `handsome` as it was: DLSS Balanced, LOD 0.35 | 54.3 | 28.0 | 34% | yes |
+| MaximumPerformance, LOD 0.35 | 56.3 | 28.5 | 46% | yes |
+| Balanced, LOD 0.2 | 58.8\* | 31.8 | 55% | yes |
+| **MaximumPerformance, LOD 0.2** | **60.5** | **32.7** | **64%** | **yes** |
+
+\* that run carried five screenshot captures, each of which stalls a frame.
+
+Both changes are now in the tier. It is the first configuration in this project that meets the
+target it was named for, and it does it with the sun's shadow and ambient occlusion switched on,
+which no configuration before it did at any frame rate.
+
+## The clutter setting was cutting something visible from the air
+
+`DeclutterMax` pulls props to a sixty-fourth of their usual distance, and its own label claims
+that is invisible from above and obvious at street level. A matched photograph says otherwise: at
+the height the benchmark flies over a suburb, the sports field loses its running track and its
+pitch markings, hedges disappear from front gardens, and fences go. `Declutter`, one step down at
+a sixteenth, keeps all of it.
+
+That costs 1.2 fps, and the recommended configuration now spends it. The greenery setting moved
+with it — from Balanced back to Full — for the same reason and at the same kind of price.
+
+Neither of these would have been found by reading the numbers. Both tiers were measured, both
+looked fine in a table, and the difference between them is a running track.
+
+## Bounding the shadow beats every settings change, on an unpatched game
+
+The largest single result in this project is not a setting. With `cs2patch revert` applied — the
+game exactly as it ships — installing `Cs2Saver` and setting nothing but the shadow reach:
+
+| | avg fps | 1% low | at 30 |
+|---|---|---|---|
+| untouched, mod off | 26.1 | 14.0 | 39% |
+| untouched, shadow reach at Block (100 m) | **32.2** | **23.4** | **75%** |
+
+A 23% average, a 67% improvement on the frames a player actually feels, and the only visible change
+is that shadows stop being drawn more than a hundred metres from the camera. Nothing else was
+touched: no profile, no clutter cut, no grading.
+
+That number is consistent with the launch-era frame analysis this project started from — the shadow
+pass was 4,828 of 6,705 draw calls and about 40 ms of the frame — and it is a knob no settings file
+can turn, because the game exposes a shadow resolution and a cascade count and never the distance.
+
+It also explains two "stock" runs that came back wrong. One measured 27.5 and another 32.8 against
+a true 26.1, and both times the cause was the mod having been left switched on in a way the run
+label did not record. Which is why the denominator is now measured three times back to back: 26.2,
+26.0, 26.0. A spread of 0.2 fps means this benchmark is repeatable to within a tenth, and that when
+two runs of "the same thing" differ by more than that, they were not the same thing.
+
+## Off has to mean off
+
+`Settings.ApplyToSystems` applied the foliage setting after choosing a budget from the preset:
+
+```csharp
+budget.TreeHalvings = (byte)Greenery;   // ran on RenderBudget.Off too
+```
+
+So a player who set the mod's preset to Off still had every tree in the city culled to an eighth of
+its usual distance, because the greenery override ran unconditionally. It is a one-line fix and it
+is worth naming, because the entire argument for trusting this mod is that its promises are
+enforced by structure — buildings are excluded by component query rather than by keeping numbers
+small — and a preset called Off that does not turn things off undoes that argument.
+
+It also quietly contaminated measurement: every "mod off" control run in this project before the
+fix had its trees cut.
