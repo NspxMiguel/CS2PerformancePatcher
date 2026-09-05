@@ -108,7 +108,11 @@ namespace Cs2Saver
             m_Curves = profile.Add<ColorCurves>();
 
             m_Linear = Ramp(bands: 0);
-            m_Stepped = Ramp(bands: 9);
+            // Fourteen, not nine. Nine was tried on a real city and read as damage rather than as
+            // style: the steps are far enough apart that neighbouring surfaces jump colour, which
+            // looks like a broken renderer instead of a deliberate one. Fourteen keeps the flat
+            // banding that makes light read as drawn without the jumps being the first thing seen.
+            m_Stepped = Ramp(bands: 14);
 
             Mod.Log.Info("City look volume created.");
         }
@@ -174,11 +178,11 @@ namespace Cs2Saver
                     // any colour cast applied on top of that lands on a darker image than it was
                     // chosen against. An earlier pass paired it with the same blue shadows Toybox
                     // uses and turned every road purple.
-                    Grade(saturation: 45f, contrast: 14f, exposure: 0.40f);
+                    Grade(saturation: 30f, contrast: 10f, exposure: 0.35f);
                     Tone(TonemappingMode.Neutral);
-                    Split(shadows: new Color(0.46f, 0.48f, 0.54f), highlights: new Color(0.56f, 0.53f, 0.47f), balance: -10f);
-                    Balance(temperature: 4f, tint: -1f);
-                    Vignette(0.10f);
+                    Split(shadows: new Color(0.47f, 0.49f, 0.53f), highlights: new Color(0.54f, 0.52f, 0.48f), balance: -10f);
+                    Balance(temperature: 3f, tint: 0f);
+                    Vignette(0.08f);
                     break;
             }
 

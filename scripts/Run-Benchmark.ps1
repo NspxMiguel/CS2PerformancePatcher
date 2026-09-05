@@ -196,6 +196,20 @@ if (Test-Path $result) { Remove-Item $result -Force }
 # arrives if something else ends up spawning the process.
 Set-Content -Path (Join-Path $userData 'runOnce.txt') -Value '--benchmark' -Encoding ascii -NoNewline
 
+# What the player had before this script touched anything. A benchmark is a temporary thing and
+# has no business leaving its own preset behind: an earlier version left a posterised colour
+# grading switched on after a measurement run, which the player found by opening the game.
+$modSettingsPath = Join-Path $userData 'Cs2Saver.coc'
+$modSettingsBefore = if (Test-Path $modSettingsPath) { Get-Content $modSettingsPath -Raw } else { $null }
+
+function Restore-ModSettings {
+    if ($null -eq $modSettingsBefore) { return }
+    $now = if (Test-Path $modSettingsPath) { Get-Content $modSettingsPath -Raw } else { $null }
+    if ($now -eq $modSettingsBefore) { return }
+    Set-Content -Path $modSettingsPath -Value $modSettingsBefore -Encoding utf8 -NoNewline
+    Write-Host '  mod settings put back'
+}
+
 function Set-ModSetting([string]$Key, [string]$Value) {
     # The mod's own settings file, same section-plus-JSON shape as everything else the game
     # writes. Rewriting it beats driving the options page, and the mod reads it at load.
@@ -236,6 +250,8 @@ if (Test-Path $launcherArgs) {
     $captured = (Get-Content $launcherArgs -Raw) -replace '^\s*("[^"]*"|\S*Cities2\.exe)\s*', ''
     $sessionArgs = $captured.Trim() -split '\s+' | Where-Object { $_ }
 }
+
+try {
 
 $started = Get-Date
 Write-Host "  launching $($started.ToString('HH:mm:ss'))$(if ($sessionArgs) { ' with the captured session' })"
@@ -307,3 +323,10 @@ while ((Get-Date) -lt $deadline) {
 
 Stop-Game
 throw "No result within ${TimeoutSec}s."
+
+}
+finally {
+    # Whether the run succeeded, timed out or threw, the player gets their own mod
+    # settings back. This script only borrowed them.
+    Restore-ModSettings
+}
