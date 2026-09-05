@@ -259,6 +259,12 @@ public static class Profiles
             // which softens the image without turning textures to mud the way a mip bias does.
             new(GraphicsRoot, "dlssQuality", "MaximumPerformance", Cost.Visible,
                 "Renders at a lower internal resolution and reconstructs. Softer, never blockier."),
+
+            // The game's own default is off; this only ever appears because someone turned it on
+            // in the options. With it on, every frame waits for the next refresh, so work that
+            // finishes at 17ms is presented at 20.8ms on a 240Hz panel. Measured +4%.
+            new(GraphicsRoot, "vSync", false, Cost.Cheap,
+                "Stops every frame waiting for the next refresh. May tear; the game ships it off."),
         ]);
 
     /// <summary>
@@ -300,6 +306,10 @@ public static class Profiles
             // terrain LOD granularity is the cost, which is why it sits in this tier.
             new(Terrain, "targetPatchSize", 64, Cost.Visible,
                 "Larger terrain patches, so fewer draw calls. Game presets stop at 24.", 4, 64),
+
+            // See the note on the same tweak in Skyline. Worth +4% and the game's own default.
+            new(GraphicsRoot, "vSync", false, Cost.Cheap,
+                "Stops every frame waiting for the next refresh. May tear; the game ships it off."),
         ]);
 
     /// <summary>
@@ -340,6 +350,13 @@ public static class Profiles
                 "Constant rather than adaptive, so it does not climb back up and cost frames."),
             new(DynamicRes, "minScale", 0.5, Cost.Visible,
                 "Half resolution per axis — a quarter of the pixels.", 0.5, 1.0),
+
+            // Potato only ever lowered the shadow resolution; it never turned them off. Worth
+            // +3.5% overall, +9% at fast-forward and +6% paused. It is worth nothing at normal
+            // play speed, because by that point this tier has run out of GPU to save and is
+            // waiting on the CPU instead — which is the whole story of this profile's ceiling.
+            new(Shadows, "enabled", false, Cost.Visible,
+                "No sun shadows at all. The city reads flat; this tier gave up looking right."),
         ]);
 
     public static readonly IReadOnlyList<TuningProfile> All =

@@ -561,6 +561,37 @@ frames were never there.
 Fast-forward is capped by the simulation, per the section above. Quoting a single whole-run
 average for this benchmark understates ordinary play by about fifteen percent and always will.
 
+## The CPU ceiling, which is where this stops
+
+Every measurement in this project up to this point was taken with `vSync` on — it is `true` in
+this machine's `Settings.coc` although the game itself ships it `false`, so somebody turned it on
+in the options years ago and it was never questioned. On a 240 Hz panel that rounds every frame up
+to a multiple of 4.167 ms. Turning it off is worth **+4%** on the average and +5% on the 1% low,
+for tearing that is close to invisible at that refresh rate. It is now in `skyline` and `potato`.
+
+With it off, and the mod running, `super-potato` gives the clearest read available of what this
+hardware can do. Medians per phase:
+
+| phase | CPU-game | CPU-render | CPU total | GPU | ceiling from CPU alone |
+|---|---|---|---|---|---|
+| paused | 5.8 ms | 2.3 ms | **8.0 ms** | 10.8 ms | 124 fps |
+| speed 1 | 8.5 ms | 2.8 ms | **11.2 ms** | 12.7 ms | **89 fps** |
+| speed 3 | 16.6 ms | 4.2 ms | **20.8 ms** | 20.3 ms | 48 fps |
+
+**120 fps needs 8.33 ms.** At normal play speed the CPU alone spends 11.2 of them, so 120 is not
+reachable on this processor at any graphics setting whatsoever — not by cutting more, not by
+cutting everything. Of that 11.2 ms, 5.8 is per-frame engine work that is there even with the game
+paused, 2.7 is the simulation, and 2.8 is the render thread.
+
+The practical ceiling is lower than 89, because an average is not a median: measured, this
+configuration runs at 74 fps at play speed. And it is now genuinely at that wall — turning shadows
+off from here is worth +9% at fast-forward, +6% paused, and **nothing at all at normal play
+speed**, where the GPU has already dropped below the CPU. The `gpu-bound` share falling from 76%
+to 66% is the same fact stated differently.
+
+Paused is the one phase where 120 is not ruled out: the CPU allows 124 there, so it would need the
+GPU frame to come down from 10.8 ms to 8.33.
+
 ## Levers that measured as nothing
 
 Recorded because a negative result costs the same to obtain as a positive one and is worth as much
