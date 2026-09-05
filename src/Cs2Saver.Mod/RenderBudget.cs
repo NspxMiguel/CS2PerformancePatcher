@@ -137,9 +137,48 @@ namespace Cs2Saver
             // city-builder player is actually watching.
             VehicleHalvings = 2,
 
-            TreeHalvings = 4,
+            // Only one halving of the foliage, against four for everything else.
+            //
+            // Four was tried and it is what a bare city looks like: from any height the trees are
+            // the green, and taking them to a sixteenth of their distance leaves flat fields where
+            // a forest was. A before-and-after against the untouched game made that obvious in a
+            // way no frame-time column ever would have.
+            //
+            // It is also nearly free to give back. The city has twenty tree prefabs and fifty-two
+            // plants against fourteen thousand props, so foliage was never where the frames were.
+            TreeHalvings = 3,
+
             PropHalvings = 6,
         };
+
+        /// <summary>
+        /// How much foliage distance to keep, as halvings. Separated from the presets because it
+        /// is the one cut in this mod that is a matter of taste rather than of degree.
+        ///
+        /// Measured on the `handsome` profile at normal play speed:
+        /// <code>
+        ///     halvings   fps   1% low   frames at 60
+        ///     1         56.0     30.3            42%
+        ///     3         57.9     31.4            53%
+        ///     4         61.4     39.2            67%
+        /// </code>
+        /// Five frames per second between a city with trees in it and a city without. Nobody
+        /// else should be deciding that, so it is a setting.
+        /// </summary>
+        public enum Foliage : byte
+        {
+            /// <summary>The game's own distances. Every tree it would have drawn.</summary>
+            Untouched = 0,
+
+            /// <summary>Half distance. Still a green city from the air.</summary>
+            Full = 1,
+
+            /// <summary>An eighth. The default: visibly thinner, still recognisably planted.</summary>
+            Balanced = 3,
+
+            /// <summary>A sixteenth. Fields where a forest was, and five frames for it.</summary>
+            Thin = 4,
+        }
 
         /// <summary>Trees and plants alone. Exists to measure what foliage actually costs.</summary>
         public static RenderBudget TreesOnly => new RenderBudget { TreeHalvings = 3 };

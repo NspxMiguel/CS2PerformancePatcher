@@ -13,6 +13,10 @@ namespace Cs2Saver
     /// costs rather than what it does, and a literal rendering loses that — "Stop drawing the
     /// clutter sooner" is a promise about what you will notice, not a description of a culling
     /// distance, and the Portuguese has to make the same promise.</para>
+    ///
+    /// <para>This file is UTF-8 and full of accented characters, which makes it the one file in
+    /// the repository that must never be edited by a tool that assumes Latin-1. One pass of a
+    /// stream editor already turned every "ç" in here into "Ã§" once.</para>
     /// </summary>
     public sealed class LocalePT : IDictionarySource
     {
@@ -37,11 +41,12 @@ namespace Cs2Saver
                 },
                 {
                     m_Settings.GetOptionDescLocaleID(nameof(Settings.Preset)),
-                    "Árvores, mobiliário de rua, trânsito e pedestres somem do quadro a uma " +
-                    "distância menor que a do jogo. Cada passo corta essa distância pela metade. " +
-                    "Prédios nunca são afetados por nenhuma destas opções, e é isso que separa " +
-                    "esta configuração de baixar o controle de detalhe do próprio jogo: a linha " +
-                    "do horizonte mantém cada triângulo que tinha."
+                    "Mobiliário de rua, trânsito e pedestres somem do quadro a uma distância " +
+                    "menor que a do jogo. Cada passo corta essa distância pela metade. Prédios " +
+                    "nunca são afetados por nenhuma destas opções, e é isso que separa esta " +
+                    "configuração de baixar o controle de detalhe do próprio jogo: a linha do " +
+                    "horizonte mantém cada triângulo que tinha. A vegetação tem controle próprio, " +
+                    "logo abaixo."
                 },
 
                 { m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.Off), "Desligado" },
@@ -75,6 +80,33 @@ namespace Cs2Saver
                 },
 
                 {
+                    m_Settings.GetOptionLabelLocaleID(nameof(Settings.Greenery)),
+                    "Quanta vegetação sobrevive"
+                },
+                {
+                    m_Settings.GetOptionDescLocaleID(nameof(Settings.Greenery)),
+                    "Separado do preset acima porque é gosto, não grau. Na máquina onde isto foi " +
+                    "medido, cinco quadros por segundo separam uma cidade com árvores de uma sem: " +
+                    "56 fps em Cheia, 58 em Equilibrada, 61 em Rala."
+                },
+                {
+                    m_Settings.GetEnumValueLocaleID(RenderBudget.Foliage.Untouched),
+                    "Intocada — cada árvore que o jogo desenharia"
+                },
+                {
+                    m_Settings.GetEnumValueLocaleID(RenderBudget.Foliage.Full),
+                    "Cheia — metade da distância, cidade ainda verde"
+                },
+                {
+                    m_Settings.GetEnumValueLocaleID(RenderBudget.Foliage.Balanced),
+                    "Equilibrada — mais rala, ainda claramente arborizada"
+                },
+                {
+                    m_Settings.GetEnumValueLocaleID(RenderBudget.Foliage.Thin),
+                    "Rala — campo onde havia floresta, e cinco quadros por isso"
+                },
+
+                {
                     m_Settings.GetOptionLabelLocaleID(nameof(Settings.CityLook)),
                     "Dar um visual à cidade"
                 },
@@ -98,12 +130,13 @@ namespace Cs2Saver
                 {
                     m_Settings.GetOptionDescLocaleID(nameof(Settings.CitySurface)),
                     "Reescreve os materiais do próprio jogo para o asfalto parar de parecer " +
-                    "molhado e as telhas pararem de reluzir. Isto muda a arte, não a imagem, e o " +
-                    "vidro nunca é tocado — deixar as janelas brilhando contra paredes foscas é " +
-                    "o que faz a cidade parecer render de arquitetura em vez de maquete de massa."
+                    "molhado e as telhas pararem de reluzir. Isto muda a arte, não a imagem. As " +
+                    "janelas vão no sentido contrário: acendem, porque vidro brilhando contra " +
+                    "parede fosca é o que faz a cidade parecer render de arquitetura em vez de " +
+                    "maquete de massa."
                 },
                 { m_Settings.GetEnumValueLocaleID(Surface.Off), "Desligado — os materiais do próprio jogo" },
-                { m_Settings.GetEnumValueLocaleID(Surface.Matte), "Fosco — sai o brilho molhado" },
+                { m_Settings.GetEnumValueLocaleID(Surface.Matte), "Fosco — sai o brilho molhado, as janelas acendem" },
                 { m_Settings.GetEnumValueLocaleID(Surface.Painted), "Pintado — chapado como tinta guache" },
 
                 {
@@ -112,7 +145,7 @@ namespace Cs2Saver
                 },
                 {
                     m_Settings.GetOptionDescLocaleID(nameof(Settings.WatchForHitches)),
-                    "Escreve no log cada frame travado, com a altura da câmera e o quanto ela " +
+                    "Escreve no log cada quadro travado, com a altura da câmera e o quanto ela " +
                     "andou, para separar um engasgo ao aproximar de um que acontece de qualquer " +
                     "jeito. Não custa nada desligado e quase nada ligado."
                 },

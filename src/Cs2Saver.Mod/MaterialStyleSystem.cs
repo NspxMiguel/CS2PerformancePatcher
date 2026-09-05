@@ -30,6 +30,31 @@ namespace Cs2Saver
     {
         private static readonly int Smoothness = Shader.PropertyToID("_Smoothness");
         private static readonly int Metallic = Shader.PropertyToID("_Metallic");
+        /// <summary>
+        /// Emission on the window shader, which stores it as an HDR colour rather than as a
+        /// separate intensity. There is no <c>_EmissiveIntensity</c> on it — a first attempt
+        /// assumed there was, found nothing, and reported "0 windows" while claiming success.
+        /// The brightness lives in the magnitude of this colour, so it is scaled rather than set.
+        /// </summary>
+        private static readonly int EmissiveColor = Shader.PropertyToID("_EmissiveColor");
+
+        /// <summary>
+        /// How much the emission follows the camera's exposure. At zero a lit window stays lit
+        /// regardless of how bright the rest of the scene is, which is what makes it read as a
+        /// light source instead of a pale patch of wall.
+        /// </summary>
+        private static readonly int EmissiveExposureWeight = Shader.PropertyToID("_EmissiveExposureWeight");
+
+        /// <summary>
+        /// The window shader, handled apart from everything else and in the opposite direction.
+        ///
+        /// Flattening a city removes the specular response that told you a surface was glass, so
+        /// windows stop reading as windows and become dark rectangles. Pushing their emission up
+        /// puts that back by another route — lit rooms behind glass — and it is the single detail
+        /// that separates an architectural render from a model of one. It is also the thing the
+        /// reference image this was designed against is built around.
+        /// </summary>
+        private const string WindowShader = "BH/SG_WinShader";
 
         /// <summary>
         /// The shaders the city itself is built from, found by survey rather than assumed.
@@ -58,6 +83,7 @@ namespace Cs2Saver
         // visually and carried a risk that could not be checked from outside.
 
         private readonly Dictionary<Material, Vector2> m_Original = new Dictionary<Material, Vector2>();
+        private readonly Dictionary<Material, Color> m_OriginalEmissive = new Dictionary<Material, Color>();
 
         private Surface m_Surface = Surface.Off;
         private bool m_Dirty;
@@ -174,11 +200,44 @@ namespace Cs2Saver
                 _ => Vector2.zero,
             };
 
+            // Windows go the other way. Flattening the city takes away the specular highlight that
+            // said "this is glass", so without this they become dark rectangles in a flat wall.
+            var glow = m_Surface switch
+            {
+                Cs2Saver.Surface.Matte => 1.7f,
+                Cs2Saver.Surface.Painted => 2.4f,
+                _ => 1f,
+            };
+
             var touched = 0;
+            var windows = 0;
 
             foreach (var material in Resources.FindObjectsOfTypeAll<Material>())
             {
                 if (material == null || material.shader == null) continue;
+
+                if (material.shader.name == WindowShader)
+                {
+                    if (!material.HasProperty(EmissiveColor)) continue;
+
+                    if (!m_OriginalEmissive.TryGetValue(material, out var was))
+                    {
+                        was = material.GetColor(EmissiveColor);
+                        m_OriginalEmissive[material] = was;
+                        if (windows == 0) Mod.Log.Info($"Window emission was {was}.");
+                    }
+
+                    // Scaled, not set: the colour carries both the hue of the light behind the
+                    // glass and its brightness, and replacing it would throw away the first.
+                    material.SetColor(EmissiveColor, new Color(was.r * glow, was.g * glow, was.b * glow, was.a));
+
+                    if (material.HasProperty(EmissiveExposureWeight))
+                        material.SetFloat(EmissiveExposureWeight, glow > 1f ? 0f : 1f);
+
+                    windows++;
+                    continue;
+                }
+
                 if (System.Array.IndexOf(CitySurfaces, material.shader.name) < 0) continue;
                 if (!material.HasProperty(Smoothness)) continue;
 
@@ -197,7 +256,8 @@ namespace Cs2Saver
                 touched++;
             }
 
-            Mod.Log.Info($"Surface style '{m_Surface}' applied to {touched} materials.");
+            Mod.Log.Info($"Surface style '{m_Surface}' applied to {touched} materials, "
+                         + $"{windows} windows at {glow:N1}x emission.");
         }
 
         private static void Survey()
@@ -228,11 +288,18 @@ namespace Cs2Saver
                 Mod.Log.Info($"  {ranked[i].Value,5} x {ranked[i].Key}");
             }
 
-            // The properties of the three commonest shaders, which between them will be most of
-            // the city. Names and types both matter: writing a float to a colour does nothing.
-            for (var i = 0; i < ranked.Count && i < 3; i++)
+            // The commonest shaders, plus the window one by name. Windows are worth calling out
+            // because they are the one surface handled in the opposite direction from the rest,
+            // and a guessed property name there fails silently — which it already did once,
+            // reporting "0 windows" while cheerfully claiming to have set an emission.
+            var named = new List<string>();
+            for (var i = 0; i < ranked.Count && i < 3; i++) named.Add(ranked[i].Key);
+            if (example.ContainsKey("BH/SG_WinShader") && !named.Contains("BH/SG_WinShader"))
+                named.Add("BH/SG_WinShader");
+
+            foreach (var key in named)
             {
-                var shader = example[ranked[i].Key].shader;
+                var shader = example[key].shader;
                 var line = new StringBuilder();
                 line.Append($"  properties of {shader.name}: ");
 
@@ -254,7 +321,11 @@ namespace Cs2Saver
 
         private static bool IsInteresting(string name)
         {
-            return name.IndexOf("Smooth", System.StringComparison.OrdinalIgnoreCase) >= 0
+            return name.IndexOf("Emiss", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("Glow", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("Light", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("Window", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("Smooth", System.StringComparison.OrdinalIgnoreCase) >= 0
                    || name.IndexOf("Metallic", System.StringComparison.OrdinalIgnoreCase) >= 0
                    || name.IndexOf("Normal", System.StringComparison.OrdinalIgnoreCase) >= 0
                    || name.IndexOf("BaseColor", System.StringComparison.OrdinalIgnoreCase) >= 0

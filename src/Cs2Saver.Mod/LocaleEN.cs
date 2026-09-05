@@ -43,31 +43,31 @@ namespace Cs2Saver
                 },
                 {
                     m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.Balanced),
-                    "Balanced — people fade earlier, traffic untouched"
+                    "Balanced â people fade earlier, traffic untouched"
                 },
                 {
                     m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.TrafficFocus),
-                    "Traffic focus — people close-range only, traffic pulled in a little"
+                    "Traffic focus â people close-range only, traffic pulled in a little"
                 },
                 {
                     m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.Aggressive),
-                    "Aggressive — anything that moves is drawn only near the camera"
+                    "Aggressive â anything that moves is drawn only near the camera"
                 },
                 {
                     m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.Declutter),
-                    "Declutter — everything except the buildings is pulled in hard"
+                    "Declutter â everything except the buildings is pulled in hard"
                 },
                 {
                     m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.DeclutterMax),
-                    "Declutter, maximum — street level will notice; the view from above will not"
+                    "Declutter, maximum â street level will notice; the view from above will not"
                 },
                 {
                     m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.TreesOnly),
-                    "Trees only — foliage fades earlier, nothing else changes"
+                    "Trees only â foliage fades earlier, nothing else changes"
                 },
                 {
                     m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.PropsOnly),
-                    "Street clutter only — signs, lamps and fences fade earlier"
+                    "Street clutter only â signs, lamps and fences fade earlier"
                 },
 
                 {
@@ -80,12 +80,27 @@ namespace Cs2Saver
                     "city with its shadows and effects turned off looks broken rather than " +
                     "stylised until something puts an intention back on it."
                 },
-                { m_Settings.GetEnumValueLocaleID(Look.Off), "Off — the game's own colours" },
-                { m_Settings.GetEnumValueLocaleID(Look.Vivid), "Vivid — colour put back, nothing else" },
-                { m_Settings.GetEnumValueLocaleID(Look.Toybox), "Toybox — cartoon: strong colour, warm sun, cool shade" },
-                { m_Settings.GetEnumValueLocaleID(Look.Miniature), "Miniature — model railway under a lamp" },
-                { m_Settings.GetEnumValueLocaleID(Look.Showroom), "Showroom — architectural render: warm light, cool sky, soft shadows" },
-                { m_Settings.GetEnumValueLocaleID(Look.Cel), "Cel — flat bands of light, the drawn look" },
+                { m_Settings.GetEnumValueLocaleID(Look.Off), "Off â the game's own colours" },
+                { m_Settings.GetEnumValueLocaleID(Look.Vivid), "Vivid â colour put back, nothing else" },
+                { m_Settings.GetEnumValueLocaleID(Look.Toybox), "Toybox â cartoon: strong colour, warm sun, cool shade" },
+                { m_Settings.GetEnumValueLocaleID(Look.Miniature), "Miniature â model railway under a lamp" },
+                { m_Settings.GetEnumValueLocaleID(Look.Showroom), "Showroom â architectural render: warm light, cool sky, soft shadows" },
+                { m_Settings.GetEnumValueLocaleID(Look.Cel), "Cel â flat bands of light, the drawn look" },
+
+                {
+                    m_Settings.GetOptionLabelLocaleID(nameof(Settings.Greenery)),
+                    "How much greenery survives"
+                },
+                {
+                    m_Settings.GetOptionDescLocaleID(nameof(Settings.Greenery)),
+                    "Kept apart from the preset above because it is taste rather than degree. On " +
+                    "the machine this was measured on, five frames per second separate a city with " +
+                    "trees in it from one without: 56 fps at Full, 58 at Balanced, 61 at Thin."
+                },
+                { m_Settings.GetEnumValueLocaleID(RenderBudget.Foliage.Untouched), "Untouched — every tree the game would draw" },
+                { m_Settings.GetEnumValueLocaleID(RenderBudget.Foliage.Full), "Full — half distance, still a green city" },
+                { m_Settings.GetEnumValueLocaleID(RenderBudget.Foliage.Balanced), "Balanced — thinner, still recognisably planted" },
+                { m_Settings.GetEnumValueLocaleID(RenderBudget.Foliage.Thin), "Thin — fields where a forest was, and five frames for it" },
 
                 {
                     m_Settings.GetOptionLabelLocaleID(nameof(Settings.CitySurface)),
@@ -98,9 +113,9 @@ namespace Cs2Saver
                     "touched 2014 leaving the windows glossy against flat walls is what makes a city read " +
                     "as an architectural render instead of a clay model."
                 },
-                { m_Settings.GetEnumValueLocaleID(Surface.Off), "Off — the game's own materials" },
-                { m_Settings.GetEnumValueLocaleID(Surface.Matte), "Matte — the wet sheen comes off" },
-                { m_Settings.GetEnumValueLocaleID(Surface.Painted), "Painted — flat as poster paint" },
+                { m_Settings.GetEnumValueLocaleID(Surface.Off), "Off â the game's own materials" },
+                { m_Settings.GetEnumValueLocaleID(Surface.Matte), "Matte â the wet sheen comes off" },
+                { m_Settings.GetEnumValueLocaleID(Surface.Painted), "Painted â flat as poster paint" },
 
                 {
                     m_Settings.GetOptionLabelLocaleID(nameof(Settings.WatchForHitches)),
@@ -120,7 +135,7 @@ namespace Cs2Saver
                 {
                     m_Settings.GetOptionDescLocaleID(nameof(Settings.RecordFrameTimings)),
                     "Writes a CSV every ten seconds with average FPS and, more usefully, the 1% " +
-                    "and 0.1% lows — the slow frames you actually feel. Use it to check whether a " +
+                    "and 0.1% lows â the slow frames you actually feel. Use it to check whether a " +
                     "setting helped instead of guessing. Saved under Cs2Saver in the game's user " +
                     "data folder."
                 },

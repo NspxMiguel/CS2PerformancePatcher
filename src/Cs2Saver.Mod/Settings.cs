@@ -58,6 +58,15 @@ namespace Cs2Saver
         public Look CityLook { get; set; } = Look.Off;
 
         /// <summary>
+        /// How much of the city's greenery survives. Kept apart from the preset above because
+        /// it is the one cut here that is taste rather than degree: five frames per second
+        /// separate a city with trees from one without, and that is not a call to make for
+        /// somebody else.
+        /// </summary>
+        [SettingsUISection(MainSection, RenderingGroup)]
+        public RenderBudget.Foliage Greenery { get; set; } = RenderBudget.Foliage.Balanced;
+
+        /// <summary>
         /// How the city's surfaces respond to light. This is the one setting that changes the art
         /// rather than the picture: it rewrites the game's own materials in memory, so asphalt
         /// stops looking wet and roof tiles stop glinting. Glass is never touched.
@@ -89,6 +98,7 @@ namespace Cs2Saver
             Preset = BudgetPreset.Off;
             CityLook = Look.Off;
             CitySurface = Surface.Off;
+            Greenery = RenderBudget.Foliage.Balanced;
             WatchForHitches = false;
             RecordFrameTimings = false;
             RunLabel = "baseline";
@@ -108,6 +118,9 @@ namespace Cs2Saver
                 BudgetPreset.PropsOnly => RenderBudget.PropsOnly,
                 _ => RenderBudget.Off,
             };
+
+            // Foliage is the player's call, so it overrides whatever the preset had in mind.
+            budget.TreeHalvings = (byte)Greenery;
 
             if (Mod.BudgetSystem != null) Mod.BudgetSystem.Budget = budget;
 
