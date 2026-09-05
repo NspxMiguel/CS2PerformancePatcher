@@ -123,6 +123,24 @@ namespace Cs2Saver
             PropHalvings = 4,
         };
 
+        /// <summary>
+        /// Declutter, pushed as far as the scale usefully goes. Props at a sixty-fourth of their
+        /// usual distance are effectively only drawn under the camera, which is invisible from
+        /// the air and obvious at street level. Buildings are still untouched.
+        /// </summary>
+        public static RenderBudget DeclutterMax => new RenderBudget
+        {
+            CitizenHalvings = 4,
+
+            // Deliberately not raised past Declutter. Traffic is 99 prefabs against 14,291 props,
+            // so cutting it further buys almost nothing measurable, and it is the one category a
+            // city-builder player is actually watching.
+            VehicleHalvings = 2,
+
+            TreeHalvings = 4,
+            PropHalvings = 6,
+        };
+
         /// <summary>Trees and plants alone. Exists to measure what foliage actually costs.</summary>
         public static RenderBudget TreesOnly => new RenderBudget { TreeHalvings = 3 };
 

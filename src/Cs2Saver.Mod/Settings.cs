@@ -32,6 +32,9 @@ namespace Cs2Saver
             /// <summary>Everything that is not a building, cut hard. The one this mod is for.</summary>
             Declutter,
 
+            /// <summary>The same, pushed to where street level starts to notice.</summary>
+            DeclutterMax,
+
             /// <summary>Foliage only. Here because it is also how foliage gets measured.</summary>
             TreesOnly,
 
@@ -73,6 +76,7 @@ namespace Cs2Saver
                 BudgetPreset.TrafficFocus => RenderBudget.TrafficFocus,
                 BudgetPreset.Aggressive => RenderBudget.Aggressive,
                 BudgetPreset.Declutter => RenderBudget.Declutter,
+                BudgetPreset.DeclutterMax => RenderBudget.DeclutterMax,
                 BudgetPreset.TreesOnly => RenderBudget.TreesOnly,
                 BudgetPreset.PropsOnly => RenderBudget.PropsOnly,
                 _ => RenderBudget.Off,

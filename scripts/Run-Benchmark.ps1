@@ -45,7 +45,7 @@ param(
 
     # Cs2Saver preset to write before the run. The mod reads its own .coc on load, so this
     # is how the mod gets A/B tested without anyone opening its options page.
-    [ValidateSet('Off', 'Balanced', 'TrafficFocus', 'Aggressive', 'Declutter', 'TreesOnly', 'PropsOnly')]
+    [ValidateSet('Off', 'Balanced', 'TrafficFocus', 'Aggressive', 'Declutter', 'DeclutterMax', 'TreesOnly', 'PropsOnly')]
     [string]$ModPreset,
 
     # How long to wait for the result before giving up. A run is 90s plus loading.

@@ -176,7 +176,8 @@ int InstallMod()
     {
         Console.WriteLine($"  {result.InstalledPath}");
         Console.WriteLine();
-        Warn("The mod is UNTESTED at runtime. It starts inert and changes nothing until configured.");
+        Console.WriteLine("  It starts inert. Enable it in a playset, then pick a preset on its options page.");
+        Console.WriteLine("  Declutter is what the 'skyline' profile was measured with.");
     }
     return result.Success ? 0 : 1;
 }
@@ -305,11 +306,11 @@ int Bench()
     Console.WriteLine("  1% low is the mean of the slowest 1% of frames, not the 99th percentile.");
     Console.WriteLine();
 
-    Console.WriteLine($"  {"run",-20}{"frames",7}{"avg fps",9}{"1% low",8}{"0.1% low",10}{"gpu ms",8}{"render ms",10}{"gpu-bound",10}");
+    Console.WriteLine($"  {"run",-26}{"frames",7}{"avg fps",9}{"1% low",8}{"0.1% low",10}{"gpu ms",8}{"render ms",10}{"gpu-bound",10}");
     foreach (var run in runs)
     {
         var e = run.Effective;
-        Console.WriteLine($"  {Truncate(run.Label, 19),-20}{e.Frames,7}{e.AvgFps,9:N1}{e.Low1PctFps,8:N1}"
+        Console.WriteLine($"  {Truncate(run.Label, 25),-26}{e.Frames,7}{e.AvgFps,9:N1}{e.Low1PctFps,8:N1}"
                           + $"{e.Low01PctFps,10:N1}{run.GpuOnly.AvgMs,8:N1}{run.CpuRender.AvgMs,10:N1}{run.GpuBoundPercent,9:N0}%");
     }
 
@@ -321,7 +322,7 @@ int Bench()
         foreach (var run in runs.Skip(1))
         {
             var e = run.Effective;
-            Console.WriteLine($"  {Truncate(run.Label, 19),-20}{"",7}{Delta(baseline.AvgFps, e.AvgFps),9}"
+            Console.WriteLine($"  {Truncate(run.Label, 25),-26}{"",7}{Delta(baseline.AvgFps, e.AvgFps),9}"
                               + $"{Delta(baseline.Low1PctFps, e.Low1PctFps),8}{Delta(baseline.Low01PctFps, e.Low01PctFps),10}"
                               + $"{Delta(first.GpuOnly.AvgMs, run.GpuOnly.AvgMs, lowerIsBetter: true),8}"
                               + $"{Delta(first.CpuRender.AvgMs, run.CpuRender.AvgMs, lowerIsBetter: true),10}");

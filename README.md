@@ -183,7 +183,8 @@ On an RTX 3050 with a Ryzen 5 4600G at 1080p, over the city the game ships for i
 | | avg | 1% low | GPU |
 |---|---|---|---|
 | untouched | 22.7 | 10.5 | 43.8 ms |
-| `skyline` + mod | **51.5** | **22.6** | 18.6 ms |
+| `skyline` + mod at Declutter | 51.3 | 22.2 | 18.6 ms |
+| `skyline` + mod at DeclutterMax | **52.9** | **22.6** | 18.0 ms |
 
 Split by what the benchmark is doing, because it spends 35 of its 90 seconds at triple simulation
 speed and a single average hides that:
@@ -191,10 +192,19 @@ speed and a single average hides that:
 | | paused | normal speed | 3x speed |
 |---|---|---|---|
 | untouched | 25.5 | 24.9 | 18.8 |
-| `skyline` + mod | 60.4 | **59.0** | 38.6 |
+| `skyline` + Declutter | 59.9 | 58.5 | 38.9 |
+| `skyline` + DeclutterMax | 63.0 | **60.2** | 39.3 |
 
-**Sixty at normal play speed.** Fast-forward is capped near 52 by the simulation itself — 19.1 ms
-of CPU per frame before anything is drawn — and this project does not cut the simulation.
+Every figure is the mean of three runs. They agreed to 0.6% on the average and 3.6% on the 1% low,
+and the GPU column reproduced to the decimal.
+
+**Sixty at normal play speed**, with full-resolution textures, every building's geometry, and
+traffic still drawn. It sits *on* the line rather than above it — the three runs read 59.9, 60.0
+and 60.8 — so treat it as sixty reached, not sixty cleared.
+
+Fast-forward does not get there and will not: at 3x the simulation alone needs 19.1 ms of CPU per
+frame before anything is drawn, which caps that phase near 52 fps on this processor no matter what
+the GPU does. This project does not cut the simulation.
 
 Not yet done, in rough order of value:
 

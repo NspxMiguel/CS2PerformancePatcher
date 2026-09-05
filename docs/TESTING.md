@@ -43,6 +43,12 @@ Three runs of the same profile, changing nothing between them, moved the average
 - **The average is good to about ±2%.**
 - **The 1% low is good to about ±10%.**
 
+Those bars were measured before the host-load guard existed, on a machine with a browser and other
+work on it. Repeating the exercise on a machine at 0.6% gives 0.6% on the average and 3.6% on the
+1% low, and the GPU column reproduced to the decimal across all three. **Most of the variance this
+project attributed to the benchmark was the machine.** Use the wider bars unless you have the
+`host.json` sidecars to prove otherwise.
+
 A change worth 5% on the 1% low is indistinguishable from doing nothing. Repeat the run before
 believing it. This is not a formality — one host tweak in this repository measured +3% average and
 -11% low, and repeating it showed both were noise.

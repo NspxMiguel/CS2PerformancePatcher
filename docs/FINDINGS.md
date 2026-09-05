@@ -542,15 +542,24 @@ this CPU. Cutting it would mean cutting the simulation, which this project does 
 Splitting `skyline` by phase, which is the only honest way to read a benchmark that spends 35 of
 its 90 seconds at triple simulation speed:
 
-| phase | avg | 1% low |
+| phase | `skyline` + Declutter | + DeclutterMax |
 |---|---|---|
-| paused | 60.4 | 36.1 |
-| speed 1 | **59.0** | 33.5 |
-| speed 3 | 38.6 | 16.3 |
+| paused | 59.9 | 63.0 |
+| speed 1 | 58.5 | **60.2** |
+| speed 3 | 38.9 | 39.3 |
 
-Normal play speed is at sixty. Fast-forward is capped by the simulation, per the section above.
-Quoting a single whole-run average for this benchmark understates ordinary play by about fifteen
-percent and always will.
+Means of three runs each. The first `skyline` run alone read 59.0 at speed 1 and was briefly
+written up here as "sixty"; three runs put it at 58.5. `DeclutterMax` — props at a sixty-fourth of
+their usual distance rather than a sixteenth — closes the rest, reading 60.0, 60.8 and 59.9. That
+is **sixty reached rather than sixty cleared**, and it should be quoted that way.
+
+`DeclutterMax` deliberately does *not* raise the vehicle cut past Declutter's. Doing so is worth
+1.3 fps at play speed and visibly thins traffic in the mid-distance, which is a poor trade in a
+game where watching the traffic is the point. Traffic is 99 prefabs against 14,291 props; the
+frames were never there.
+
+Fast-forward is capped by the simulation, per the section above. Quoting a single whole-run
+average for this benchmark understates ordinary play by about fifteen percent and always will.
 
 ## Levers that measured as nothing
 
@@ -564,9 +573,22 @@ the second time somebody wonders:
 | `targetPatchSize` 24 to 64 | `sharp` + mod | +1.7% |
 | `lodCrossFade` off | `sharp` + mod, no shadows | +1.3% |
 | `meshMemoryBudget` 1024 to 4096 | `skyline` | +0.2% |
+| `maxLightCount` 1024 to 4096 | `skyline` + mod | -1.3% |
 | mod culling pedestrians and vehicles | stock settings | +0.9% |
 
-Everything on that list is inside the ±2% error bar on the average. The upscaler rows are the
+Everything on that list is inside the ±2% error bar on the average.
+
+One lever measured actively **harmful**, which is rarer and more useful:
+
+| lever | on | measured |
+|---|---|---|
+| `maxLightCount` 1024 to 512 | `skyline` + mod | **-4% average, -32% on the 1% low** |
+
+Below about a thousand concurrent lights the city has more than the budget allows and something in
+the game gets expensive about it — the speed-3 1% low fell from 17.0 to 9.3. The `maxLightCount`
+of 1024 that `sharp` already sets measures identical to the game's own 4096 default, so it is
+neither helping nor hurting at this camera; it is kept only because a night-time city is a
+different scene and nothing here has measured one. The upscaler rows are the
 interesting pair: the same change is worth more once the frame is no longer waiting on triangles,
 which is the general shape of this whole exercise — **the order the levers are pulled in changes
 what they are worth.**

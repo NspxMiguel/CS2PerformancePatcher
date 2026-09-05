@@ -58,6 +58,10 @@ namespace Cs2Saver
                     "Declutter — everything except the buildings is pulled in hard"
                 },
                 {
+                    m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.DeclutterMax),
+                    "Declutter, maximum — street level will notice; the view from above will not"
+                },
+                {
                     m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.TreesOnly),
                     "Trees only — foliage fades earlier, nothing else changes"
                 },
