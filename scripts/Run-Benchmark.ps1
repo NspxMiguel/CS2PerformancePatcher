@@ -43,6 +43,11 @@ param(
     # Restore the pristine settings before the run instead of applying a profile.
     [switch]$Revert,
 
+    # Cs2Saver preset to write before the run. The mod reads its own .coc on load, so this
+    # is how the mod gets A/B tested without anyone opening its options page.
+    [ValidateSet('Off', 'Balanced', 'TrafficFocus', 'Aggressive')]
+    [string]$ModPreset,
+
     # How long to wait for the result before giving up. A run is 90s plus loading.
     [int]$TimeoutSec = 420
 )
@@ -120,9 +125,36 @@ if (Test-Path $result) { Remove-Item $result -Force }
 # arrives if something else ends up spawning the process.
 Set-Content -Path (Join-Path $userData 'runOnce.txt') -Value '--benchmark' -Encoding ascii -NoNewline
 
+if ($ModPreset) {
+    # The mod's own settings file, same section-plus-JSON shape as everything else the game
+    # writes. Rewriting it beats driving the options page, and the mod reads it at load.
+    $modSettings = Join-Path $userData 'Cs2Saver.coc'
+    if (-not (Test-Path $modSettings)) {
+        throw "Cs2Saver.coc does not exist yet. The mod has to load once before its preset can be set."
+    }
+
+    $text = Get-Content $modSettings -Raw
+    $updated = $text -replace '("Preset"\s*:\s*")[^"]*(")', "`${1}$ModPreset`${2}"
+    if ($updated -eq $text -and $text -notmatch "`"Preset`"\s*:\s*`"$ModPreset`"") {
+        throw "Could not find a Preset field to set in Cs2Saver.coc."
+    }
+    Set-Content -Path $modSettings -Value $updated -Encoding utf8 -NoNewline
+    Write-Host "  mod preset '$ModPreset'"
+}
+
+# Mods only load when the game has a Paradox session, which arrives on the command line from
+# the launcher. Replaying a captured one is what makes the mod benchmarkable unattended;
+# without it the run still works, it just has no mods in it.
+$launcherArgs = Join-Path $outDir 'launcher-args.txt'
+$sessionArgs = @()
+if (Test-Path $launcherArgs) {
+    $captured = (Get-Content $launcherArgs -Raw) -replace '^\s*("[^"]*"|\S*Cities2\.exe)\s*', ''
+    $sessionArgs = $captured.Trim() -split '\s+' | Where-Object { $_ }
+}
+
 $started = Get-Date
-Write-Host "  launching $($started.ToString('HH:mm:ss'))"
-$proc = Start-Process -FilePath $exe -ArgumentList '--benchmark' -WorkingDirectory $gameDir -PassThru
+Write-Host "  launching $($started.ToString('HH:mm:ss'))$(if ($sessionArgs) { ' with the captured session' })"
+$proc = Start-Process -FilePath $exe -ArgumentList (@('--benchmark') + $sessionArgs) -WorkingDirectory $gameDir -PassThru
 
 $deadline = $started.AddSeconds($TimeoutSec)
 $foregrounded = $false
