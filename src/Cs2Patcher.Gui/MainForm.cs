@@ -368,6 +368,14 @@ public sealed class MainForm : Form
         var extras = new List<Tweak>();
         if (_hardware?.HasVram == true) extras.Add(Profiles.MeshBudgetFor(_hardware.VramMegabytes));
 
+        // The lowest tiers cut the resolution, and what that means depends on this display
+        // rather than on the profile.
+        if (profile.ScreenScale is { } scale)
+        {
+            var resolution = Profiles.ResolutionFor(scale, DisplayProbe.Current());
+            if (resolution is not null) extras.Add(resolution);
+        }
+
         try
         {
             var result = _engine!.Apply(profile, extras);

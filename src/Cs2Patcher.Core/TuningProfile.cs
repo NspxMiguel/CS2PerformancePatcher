@@ -76,12 +76,22 @@ public sealed record Measured(double Fps, double OnePercentLow, int ShareAtSixty
     public int GainPercent => (int)Math.Round((Fps - StockFps) / StockFps * 100);
 }
 
+/// <param name="ScreenScale">
+/// Render at this fraction of the desktop resolution, or null to leave it alone.
+///
+/// This is the only lever left once every graphics setting is at its floor, and it is deliberately
+/// expressed as a fraction rather than as a resolution: the tier has to mean the same thing on a
+/// 4K monitor, a 1080p one and a Steam Deck's 1280x800. The actual mode is computed at apply time
+/// from whatever the desktop is currently in, refresh rate included, because a mode the driver
+/// rejects is a black screen on somebody else's computer.
+/// </param>
 public sealed record TuningProfile(
     string Id,
     string Name,
     string Description,
     IReadOnlyList<Tweak> Tweaks,
-    Measured? Measured = null);
+    Measured? Measured = null,
+    double? ScreenScale = null);
 
 /// <summary>
 /// The built-in profiles.
@@ -442,9 +452,25 @@ public static class Profiles
     /// because they cost looks out of proportion to the frames they return: the muddiest mip bias
     /// the game offers, no clouds of any kind, and no fog.
     /// </summary>
+    /// <summary>
+    /// For hardware where the GPU is the wall. On the machine everything here was measured on it
+    /// is not, and this tier is honest about buying nothing there.
+    ///
+    /// <para>Three separate attempts to find something below <see cref="SuperPotato"/> all came
+    /// back empty on the reference machine: the muddiest textures with no fog or clouds measured
+    /// 75.8 against 77.8; two thirds of the resolution measured 77.0; half of it measured 80.3.
+    /// Cutting 63% of the pixels moved the GPU frame by 3%, which is the whole story — by this
+    /// point the frame is geometry and draw calls, and neither is priced in pixels.</para>
+    ///
+    /// <para>That is a fact about one computer, not about the tier. A Steam Deck, an integrated
+    /// GPU or anything without an upscaler is GPU-bound exactly where this machine stops being
+    /// so, and there the resolution cut is the difference between running and not. The tier is
+    /// kept for those, and says plainly that it does nothing here.</para>
+    /// </summary>
     public static readonly TuningProfile MegaPotato = new(
         "mega-potato", "If It Opened, It Runs",
-        "Everything below super-potato that was left alone for being too ugly to be worth it.",
+        "Two thirds of the resolution, no clouds, no fog, muddiest textures. Buys nothing on a "
+        + "machine already limited by its CPU; buys everything on one limited by its GPU.",
         [
             .. SuperPotato.Tweaks,
 
@@ -459,10 +485,27 @@ public static class Profiles
 
             new(Water, "maxTessellationFactor", 0.0, Cost.Visible, "Flat water.", 0, 15),
         ],
-        new Measured(75.8, 39.8, 92));
+        new Measured(77.0, 42.5, 94),
+        ScreenScale: 0.67);
+
+    /// <summary>
+    /// The floor. Half resolution, and nothing else left to give.
+    ///
+    /// There is no tier below this one because there is nothing below it to set: every graphics
+    /// setting the game exposes is already at the end of its range, and the only remaining lever
+    /// is the number of pixels, which this halves per axis. A quarter of the pixels of the
+    /// desktop, upscaled by the display.
+    /// </summary>
+    public static readonly TuningProfile BoneDry = new(
+        "bone-dry", "Bone Dry",
+        "Half the resolution per axis, on top of everything else being at its floor. Nothing "
+        + "below this exists, because there is nothing left to turn down.",
+        [.. MegaPotato.Tweaks],
+        new Measured(80.3, 43.9, 96),
+        ScreenScale: 0.5);
 
     public static readonly IReadOnlyList<TuningProfile> All =
-        [FreeWins, TrafficSim, SharpCity, Handsome, Skyline, Potato, SuperPotato, MegaPotato];
+        [FreeWins, TrafficSim, SharpCity, Handsome, Skyline, Potato, SuperPotato, MegaPotato, BoneDry];
 
     public static TuningProfile? ById(string id) =>
         All.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
@@ -472,6 +515,53 @@ public static class Profiles
     /// undershoots available VRAM makes the game evict and re-upload meshes it is about
     /// to need again. Sized off reported VRAM, clamped to the game's own 128–4096 MB range.
     /// </summary>
+    /// <summary>
+    /// The output resolution tweak for a profile that asks for one, sized against the desktop.
+    ///
+    /// Rounded to even numbers because odd render targets upset upscalers, and floored at 640x360
+    /// because below that the interface stops being readable and the game stops being playable,
+    /// which is not a trade any tier here is offering.
+    /// </summary>
+    public static Tweak? ResolutionFor(double scale, DisplayMode? display)
+    {
+        if (display is null) return null;
+
+        var wanted = (long)(display.Width * scale) * (long)(display.Height * scale);
+
+        // Pick from what the driver actually offers, at the same aspect ratio, closest to the
+        // pixel count asked for. Computing a resolution arithmetically produces sizes like
+        // 1286x724 that no display mode matches, and exclusive fullscreen refuses those.
+        var aspect = (double)display.Width / display.Height;
+        var candidate = DisplayProbe.SupportedModes(display)
+            .Where(m => m.Width >= 640 && m.Height >= 360)
+            .Where(m => Math.Abs((double)m.Width / m.Height - aspect) < 0.02)
+            .Where(m => (long)m.Width * m.Height < (long)display.Width * display.Height)
+            .OrderBy(m => Math.Abs((long)m.Width * m.Height - wanted))
+            .FirstOrDefault();
+
+        if (candidate is null) return null;
+
+        var width = candidate.Width;
+        var height = candidate.Height;
+
+        if (width >= display.Width && height >= display.Height) return null;
+
+        // The shape the game itself writes: ScreenResolution.Write emits width, height and the
+        // refresh rate as a numerator/denominator pair, under its own type marker.
+        var value = new JsonObject
+        {
+            ["@type"] = "Game.Settings.ScreenResolution",
+            ["width"] = width,
+            ["height"] = height,
+            ["numerator"] = display.RefreshNumerator,
+            ["denominator"] = display.RefreshDenominator,
+        };
+
+        return new Tweak(GraphicsRoot, "resolution", value, Cost.Visible,
+            $"Renders at {width}x{height} instead of {display.Width}x{display.Height} and lets the "
+            + "display scale it up. The last lever there is once every setting is at its floor.");
+    }
+
     public static Tweak MeshBudgetFor(int vramMegabytes)
     {
         var budget = vramMegabytes switch

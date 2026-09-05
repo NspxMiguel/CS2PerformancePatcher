@@ -92,9 +92,14 @@ int Status()
 int List()
 {
     // Ordered by how good each tier looks, which is not the same as how fast it is: the bottom
-    // two swap places, because the ugliest one measured slower than the tier above it.
-    Console.WriteLine("Profiles, best-looking first. Figures are normal play speed with the mod");
-    Console.WriteLine("installed, on an RTX 3050 / Ryzen 5 4600G at 1080p. Untouched is 26 fps there.");
+    // three are within noise of each other on the machine they were measured on.
+    Console.WriteLine("Profiles, best-looking first.");
+    Console.WriteLine();
+    Console.WriteLine("  Tested on   RTX 3050 8GB, Ryzen 5 4600G (12 threads), 16 GB, 1080p");
+    Console.WriteLine("  Measured    normal play speed, with the mod at Declutter Max");
+    Console.WriteLine("  Untouched   26.1 fps, 13.9 1% low, on that machine");
+    Console.WriteLine();
+    Console.WriteLine("  Your numbers will differ. These are one computer, not a benchmark database.");
     Console.WriteLine();
     Console.WriteLine($"  {"",-14} {"",-24}{"fps",6}{"1% low",8}{"at 60",7}{"gain",8}");
 
@@ -179,10 +184,20 @@ int Apply()
         return 1;
     }
 
-    // Mesh budget is the one setting that depends on the machine rather than the profile.
+    // Two settings depend on the machine rather than on the profile: how much mesh memory there
+    // is to work with, and what "two thirds of the resolution" actually means on this display.
     var extras = new List<Tweak>();
     if (hardware?.HasVram == true)
         extras.Add(Profiles.MeshBudgetFor(hardware.VramMegabytes));
+
+    if (profile.ScreenScale is { } scale)
+    {
+        var display = DisplayProbe.Current();
+        var resolution = Profiles.ResolutionFor(scale, display);
+
+        if (resolution is not null) extras.Add(resolution);
+        else Warn("The desktop resolution could not be read, so this tier's resolution cut was skipped.");
+    }
 
     extras.AddRange(ParseOverrides(args));
 
