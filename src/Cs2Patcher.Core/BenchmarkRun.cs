@@ -113,6 +113,25 @@ public sealed class BenchmarkRun
         }
     }
 
+    /// <summary>
+    /// The share of frames that actually met a frame rate, as a percentage.
+    ///
+    /// This is what "sixty stable" asks for and no other statistic answers. An average of sixty
+    /// can be two thirds of the frames at eighty and a third of them at thirty, which is not what
+    /// anybody means by stable; and a 1% low describes the worst forty frames of four thousand
+    /// while saying nothing about the other 3960. Measured here, a profile averaging 60.2 at play
+    /// speed put 62% of its frames at or above sixty and 100% of them above thirty.
+    /// </summary>
+    public static double ShareMeeting(IReadOnlyList<double> frameTimesMs, double targetFps)
+    {
+        if (frameTimesMs.Count == 0 || targetFps <= 0) return 0;
+
+        var budgetMs = 1000.0 / targetFps;
+        var met = 0;
+        foreach (var ms in frameTimesMs) if (ms <= budgetMs) met++;
+        return 100.0 * met / frameTimesMs.Count;
+    }
+
     public FrameStats Effective => FrameStats.From(EffectiveMs);
     public FrameStats GpuOnly => FrameStats.From(GpuMs);
     public FrameStats CpuTotal => FrameStats.From(CpuMs);
@@ -122,7 +141,14 @@ public sealed class BenchmarkRun
     /// The run split into the three phases the benchmark drives. The paused phase is the
     /// cleanest read on rendering alone; the speed-3 phase is where simulation load peaks.
     /// </summary>
-    public IEnumerable<(string Name, FrameStats Stats)> Phases()
+    public IEnumerable<(string Name, FrameStats Stats)> Phases() =>
+        PhaseSlices().Select(p => (p.Name, FrameStats.From(p.Frames)));
+
+    /// <summary>
+    /// The same split, handing back the frames themselves. Anything that asks a question of the
+    /// distribution rather than of its summary — how many frames met sixty, say — needs these.
+    /// </summary>
+    public IEnumerable<(string Name, IReadOnlyList<double> Frames)> PhaseSlices()
     {
         var frames = EffectiveMs;
         if (frames.Count == 0) yield break;
@@ -131,7 +157,7 @@ public sealed class BenchmarkRun
         // we expect means the format moved, so report the run whole rather than guess at splits.
         if (PhaseMarkers.Count != 2)
         {
-            yield return ("whole run", FrameStats.From(frames));
+            yield return ("whole run", frames);
             yield break;
         }
 
@@ -146,7 +172,7 @@ public sealed class BenchmarkRun
 
             var slice = new double[end - start];
             for (var j = 0; j < slice.Length; j++) slice[j] = frames[start + j];
-            yield return (names[i], FrameStats.From(slice));
+            yield return (names[i], slice);
         }
     }
 

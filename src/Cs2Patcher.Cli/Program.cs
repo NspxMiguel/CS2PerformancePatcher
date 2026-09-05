@@ -331,13 +331,28 @@ int Bench()
 
     if (GetOption(args, "--phases") is not null || args.Contains("--phases"))
     {
+        // "Sixty stable" is a claim about the distribution, not about its average, so the phase
+        // view carries the share of frames that actually met a rate. Everything else here can
+        // read well while a third of the frames miss.
+        var targetFps = double.TryParse(GetOption(args, "--target"), NumberStyles.Float,
+            CultureInfo.InvariantCulture, out var parsed) && parsed > 0 ? parsed : 60;
+
         Console.WriteLine();
-        Console.WriteLine("  By phase (paused is the cleanest read on rendering alone)");
+        Console.WriteLine("  By phase. Normal play is 'speed 1'; 'speed 3' is fast-forward, which");
+        Console.WriteLine("  no one plays at and which drags every whole-run average down.");
+        Console.WriteLine($"    {"",-10}{"frames",7}{"avg fps",9}{"1% low",8}{"0.1% low",10}{$"at {targetFps:N0}",8}{"at 30",8}");
+
         foreach (var run in runs)
         {
             Console.WriteLine($"  {run.Label}");
-            foreach (var (name, stats) in run.Phases())
-                Console.WriteLine($"    {name,-10}{stats.Frames,7}{stats.AvgFps,9:N1}{stats.Low1PctFps,8:N1}{stats.Low01PctFps,10:N1}");
+            foreach (var (name, frames) in run.PhaseSlices())
+            {
+                var stats = FrameStats.From(frames);
+                Console.WriteLine($"    {name,-10}{stats.Frames,7}{stats.AvgFps,9:N1}{stats.Low1PctFps,8:N1}"
+                                  + $"{stats.Low01PctFps,10:N1}"
+                                  + $"{BenchmarkRun.ShareMeeting(frames, targetFps),7:N0}%"
+                                  + $"{BenchmarkRun.ShareMeeting(frames, 30),7:N0}%");
+            }
         }
     }
 
@@ -473,6 +488,7 @@ int Help()
     Console.WriteLine("  --set Type.property=value    Push one setting past the profile (repeatable)");
     Console.WriteLine("  --phases                     bench: split each run into paused / speed 1 / speed 3");
     Console.WriteLine("  --spikes                     bench: take the slowest 1% of frames apart");
+    Console.WriteLine("  --target <fps>                bench --phases: what share of frames met it (default 60)");
     return 0;
 }
 
