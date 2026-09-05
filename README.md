@@ -50,19 +50,27 @@ Every bound the patcher enforces was read out of the game's own `[SettingsUISlid
 
 ## Profiles
 
-| Profile        | What it costs you | Measured here |
+| Profile        | What it costs you | At play speed |
 |----------------|-------------------|---------------|
-| `free`         | Nothing you can see. Removes work that produces no visible pixels. | +5% |
-| `traffic`      | Effects you do not look at. City and traffic stay sharp. **Start here.** | +6% |
-| `sharp`        | Every screen-space effect. Geometry and textures completely untouched. | +33% |
-| `skyline`      | The sun's shadows and the clutter. Buildings and textures stay sharp. **Best trade.** | +127% |
-| `potato`       | Visible cuts, including blurrier textures. For hardware with no upscaler. | +62% |
-| `super-potato` | Everything. It looks how it sounds. | +130% |
+| `free`         | Nothing you can see. Removes work that produces no visible pixels. | 26 |
+| `traffic`      | Effects you do not look at. City and traffic stay sharp. | 26 |
+| `sharp`        | Every screen-space effect. Geometry and textures completely untouched. | 33 |
+| `handsome`     | Shadows and the clutter. Sharp textures, sharp edges. **Start here.** | **61** |
+| `skyline`      | The same, trading internal resolution for a sharper city. | 60 |
+| `potato`       | Visible cuts, including blurry textures. For machines with no upscaler. | 48 |
+| `super-potato` | Everything, including the internal resolution. Jagged, and fast. | 78 |
+| `mega-potato`  | Below that. Measures as nothing here; kept for hardware this has never run on. | 76 |
 
-Percentages are average fps against untouched settings on the machine in
-[docs/FINDINGS.md](docs/FINDINGS.md), and `skyline` assumes the mod is installed — about a fifth of
-its gain comes from there. Note that `skyline` beats `potato` on speed *and* on looks; `potato`
-is kept for machines with no upscaler at all, where its mip bias is doing real work.
+Figures are the speed-1 phase — normal play — with the mod installed, on the machine in
+[docs/FINDINGS.md](docs/FINDINGS.md). Roughly a fifth of every one of them comes from the mod.
+
+**`handsome` is the one to use.** It is built by starting from the fastest tier and spending its
+whole surplus on the image: 1114x627 internal instead of 640x360, full-resolution textures, and
+the game's own Low geometry rather than the LOD floor. Sixty-one frames at play speed with 67% of
+frames at sixty or better, and not one below thirty.
+
+Coming at it from the other end does not work. `sharp` with the mod running measures 48, and there
+is nothing left in it to cut that is not the city itself.
 
 Each change is tagged `Free`, `Cheap`, or `Visible`, and `cs2patch apply` prints every one with its
 before and after value. Nothing happens that you cannot see happening.
@@ -219,10 +227,17 @@ Neither tier drops a single frame below 30 at normal play speed.
 bottom tier's looks. Fast-forward reaches neither, and cannot: at 3x the simulation alone needs
 19.1 ms of CPU per frame before anything is drawn.
 
-**120 is not reachable on this processor at play speed**, at any graphics setting. 120 fps is an
-8.33 ms budget and the CPU alone spends 11.2 of them — 5.8 ms of engine work that is there even
-while paused, 2.7 ms of simulation, 2.8 ms of render thread. Paused is the one phase not ruled
-out, where the CPU would allow 124. See [docs/FINDINGS.md](docs/FINDINGS.md).
+**120 is not reachable on this machine, on this city.** That has now been checked from both ends.
+The CPU alone spends 11.2 ms per frame at play speed against the 8.33 ms a 120 fps frame allows,
+so no graphics setting can get there — and separately, the GPU is already at its floor, because
+`super-potato` renders internally at 640x360 and the remaining 13.5 ms cannot be halved by
+dropping the output resolution as well.
+
+The one thing that would move it is a smaller city. Of that 11.2 ms, 5.8 is per-frame engine work
+that scales with how much there is to draw and 2.7 is simulation that scales with how much there
+is to simulate; the benchmark city has 105,188 people. That is a reasoned projection rather than a
+measurement, because the harness can only drive the benchmark's own city — the mod's frame log is
+the way to check it on yours. See [docs/FINDINGS.md](docs/FINDINGS.md).
 
 Not yet done, in rough order of value:
 
