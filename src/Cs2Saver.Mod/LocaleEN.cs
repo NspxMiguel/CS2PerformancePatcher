@@ -103,6 +103,17 @@ namespace Cs2Saver
                 { m_Settings.GetEnumValueLocaleID(Surface.Painted), "Painted — flat as poster paint" },
 
                 {
+                    m_Settings.GetOptionLabelLocaleID(nameof(Settings.WatchForHitches)),
+                    "Write down every stutter"
+                },
+                {
+                    m_Settings.GetOptionDescLocaleID(nameof(Settings.WatchForHitches)),
+                    "Notes each stalled frame in the log with the camera height and how far it " +
+                    "moved, so a stutter while zooming in can be told apart from one that happens " +
+                    "anyway. Costs nothing while it is off and almost nothing while it is on."
+                },
+
+                {
                     m_Settings.GetOptionLabelLocaleID(nameof(Settings.RecordFrameTimings)),
                     "Record frame timings to a file"
                 },

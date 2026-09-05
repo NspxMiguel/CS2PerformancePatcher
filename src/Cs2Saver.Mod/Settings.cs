@@ -65,6 +65,14 @@ namespace Cs2Saver
         [SettingsUISection(MainSection, RenderingGroup)]
         public Surface CitySurface { get; set; } = Surface.Off;
 
+        /// <summary>
+        /// Watches for stalls while you play and writes each one down with the camera height,
+        /// because the benchmark this project measures with never descends to street level and
+        /// therefore cannot see the hitch people actually complain about.
+        /// </summary>
+        [SettingsUISection(MainSection, MeasurementGroup)]
+        public bool WatchForHitches { get; set; }
+
         /// <summary>Records frame timing to a CSV so a preset can be judged by numbers.</summary>
         [SettingsUISection(MainSection, MeasurementGroup)]
         public bool RecordFrameTimings { get; set; }
@@ -81,6 +89,7 @@ namespace Cs2Saver
             Preset = BudgetPreset.Off;
             CityLook = Look.Off;
             CitySurface = Surface.Off;
+            WatchForHitches = false;
             RecordFrameTimings = false;
             RunLabel = "baseline";
         }
@@ -119,6 +128,8 @@ namespace Cs2Saver
                 Mod.MaterialStyle.Surface = CitySurface;
                 Mod.MaterialStyle.RequestSurvey();
             }
+
+            if (Mod.HitchLog != null) Mod.HitchLog.Watching = WatchForHitches;
 
             if (Mod.FrameLog != null)
             {

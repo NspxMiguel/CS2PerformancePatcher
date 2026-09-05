@@ -26,6 +26,7 @@ namespace Cs2Saver
         internal static FrameLogSystem FrameLog;
         internal static CityLookSystem CityLook;
         internal static MaterialStyleSystem MaterialStyle;
+        internal static HitchLogSystem HitchLog;
         internal static Settings Setting;
 
         public void OnLoad(UpdateSystem updateSystem)
@@ -74,6 +75,15 @@ namespace Cs2Saver
             {
                 updateSystem.UpdateAt<MaterialStyleSystem>(SystemUpdatePhase.PostSimulation);
                 MaterialStyle = updateSystem.World.GetOrCreateSystemManaged<MaterialStyleSystem>();
+            });
+
+            TryRegister("hitch watch", () =>
+            {
+                // LateUpdate, so the frame time it reads is the whole frame rather than the part
+                // that had happened by the time simulation ran.
+                updateSystem.UpdateAt<HitchLogSystem>(SystemUpdatePhase.LateUpdate);
+                HitchLog = updateSystem.World.GetOrCreateSystemManaged<HitchLogSystem>();
+                HitchLog.Watching = false;
             });
 
             TryRegister("frame log", () =>
@@ -128,6 +138,7 @@ namespace Cs2Saver
                 if (MaterialStyle != null) MaterialStyle.Surface = Surface.Off;
 
                 if (FrameLog != null) FrameLog.Recording = false;
+                if (HitchLog != null) HitchLog.Watching = false;
             }
             catch (Exception ex)
             {
@@ -140,6 +151,7 @@ namespace Cs2Saver
                 CityLook = null;
                 MaterialStyle = null;
                 FrameLog = null;
+                HitchLog = null;
                 Log.Info($"{nameof(Cs2Saver)} unloaded.");
             }
         }
