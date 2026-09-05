@@ -605,6 +605,36 @@ to 66% is the same fact stated differently.
 Paused is the one phase where 120 is not ruled out: the CPU allows 124 there, so it would need the
 GPU frame to come down from 10.8 ms to 8.33.
 
+## The CPU frame will not come down, and this is what was tried
+
+120 fps needs an 8.33 ms frame and the CPU spends 11.2 of them at play speed. The simulation is
+2.7 ms of that and is not available to cut — that is the design rule this project is built on —
+which leaves 5.8 ms of per-frame engine work that is present even with the game paused. It is
+rendering work by definition, since it survives the simulation stopping.
+
+**Skeletal animation was the obvious candidate and it is worth nothing.** The bones of every
+visible pedestrian and vehicle are solved each frame; four of the game's rendering systems do it
+(`AnimatedSystem`, `InitializeAnimatedSystem`, `InitializeBonesSystem`,
+`InitializeBoneHistoriesSystem`). Disabling all four — which a mod can do outright, since
+`ComponentSystemBase.Enabled` is a plain property — measured:
+
+| CPU-game median | paused | speed 1 | speed 3 |
+|---|---|---|---|
+| normal | 6.37 ms | 9.79 ms | 17.03 ms |
+| animation disabled | 6.75 ms | 10.24 ms | 17.81 ms |
+
+Slightly worse in every phase. The mechanism is not mysterious: with the mod's clutter cut in
+place almost no pedestrian is inside the culling distance, and the game already skips animating
+what it has culled. There was nothing there to save.
+
+The code for it was deleted rather than shipped. A setting that measures as zero is worse than no
+setting, because somebody will turn it on and believe it helped.
+
+**Update intervals are the other half of this lever and remain untouched on purpose.** Every
+system can declare one, but 198 of the 254 overrides are in `Game.Simulation`, and the game throws
+outright on an interval that is not a power of two. Slowing simulation systems down would buy
+frames by making the city think less often, which is the one thing this project does not do.
+
 ## Levers that measured as nothing
 
 Recorded because a negative result costs the same to obtain as a positive one and is worth as much

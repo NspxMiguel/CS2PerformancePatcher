@@ -56,6 +56,10 @@ param(
     [ValidateSet('Off', 'Matte', 'Painted')]
     [string]$ModSurface,
 
+    # Cs2Saver: stop computing skeletal animation. Rendering work, not simulation.
+    [ValidateSet('true', 'false')]
+    [string]$ModStopAnimating,
+
     # How long to wait for the result before giving up. A run is 90s plus loading.
     [int]$TimeoutSec = 420,
 
@@ -214,6 +218,26 @@ function Restore-ModSettings {
     Write-Host '  mod settings put back'
 }
 
+function Set-ModFlag([string]$Key, [bool]$Value) {
+    # Booleans are unquoted in this file, so they need their own writer rather than the
+    # string one below.
+    $modSettings = Join-Path $userData 'Cs2Saver.coc'
+    if (-not (Test-Path $modSettings)) { throw "Cs2Saver.coc does not exist yet." }
+
+    $literal = if ($Value) { 'true' } else { 'false' }
+    $text = Get-Content $modSettings -Raw
+
+    if ($text -match "`"$Key`"\s*:\s*(true|false)") {
+        $updated = $text -replace "(`"$Key`"\s*:\s*)(true|false)", "`${1}$literal"
+    }
+    else {
+        $updated = $text -replace '(\{\s*\r?\n)', "`${1}    `"$Key`": $literal,`r`n"
+    }
+
+    Set-Content -Path $modSettings -Value $updated -Encoding utf8 -NoNewline
+    Write-Host "  mod $Key $literal"
+}
+
 function Set-ModSetting([string]$Key, [string]$Value) {
     # The mod's own settings file, same section-plus-JSON shape as everything else the game
     # writes. Rewriting it beats driving the options page, and the mod reads it at load.
@@ -245,6 +269,7 @@ function Set-ModSetting([string]$Key, [string]$Value) {
 if ($ModPreset) { Set-ModSetting 'Preset' $ModPreset }
 if ($ModLook) { Set-ModSetting 'CityLook' $ModLook }
 if ($ModSurface) { Set-ModSetting 'CitySurface' $ModSurface }
+if ($ModStopAnimating) { Set-ModFlag 'StopAnimating' ($ModStopAnimating -eq 'true') }
 
 # Mods only load when the game has a Paradox session, which arrives on the command line from
 # the launcher. Replaying a captured one is what makes the mod benchmarkable unattended;
