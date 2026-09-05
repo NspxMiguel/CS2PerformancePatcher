@@ -529,6 +529,16 @@ public static class Profiles
             new(Shadows, "shadowCullingThresholdVolume", 8.0, Cost.Cheap,
                 "Same, by volume. Street furniture stops paying into the shadow map."),
 
+            // Free, and measured as free: 60.7 against 60.8, which is inside the run-to-run
+            // spread. It buys aerial depth at distance, which is the one thing a city seen from
+            // above has instead of a horizon.
+            new(Volumetrics, "enabled", true, Cost.Cheap,
+                "Volumetric fog, back on. Measured at 0.1 fps, which is nothing."),
+            new(Volumetrics, "budget", 0.15, Cost.Cheap,
+                "The cheapest froxel budget the game offers.", 0.0, 1.0),
+            new(Volumetrics, "resolutionDepthRatio", 0.5, Cost.Cheap,
+                "Half depth resolution. Fog has no detail to lose.", 0.0, 1.0),
+
             new(Ssao, "enabled", true, Cost.Cheap,
                 "Ambient occlusion, back on. It is what puts a building back on its ground."),
             new(Ssao, "stepCount", 4, Cost.Cheap, "Fewest samples the effect still reads at.", 2, 32),

@@ -294,7 +294,17 @@ namespace Cs2Saver
                     // taking the contrast back in grading holds shape at both ends.
                     Grade(saturation: 34f, contrast: 22f, exposure: 0.06f);
                     Tone(TonemappingMode.Neutral);
-                    Split(shadows: new Color(0.40f, 0.46f, 0.62f), highlights: new Color(0.62f, 0.56f, 0.46f), balance: 0f);
+
+                    // The blue in the shadows used to be 0.40/0.46/0.62, and a photograph of the
+                    // benchmark's dusk is what brought it down. Split toning assumes a lit scene
+                    // with distinct highlights and shadows; at dusk almost the whole frame is
+                    // shadow, so the shadow tint stops being a tint and becomes the colour of the
+                    // image. The game's own dusk is a strong orange and this turned it olive.
+                    //
+                    // Halving the separation keeps the cool-shade-against-warm-sun reading in
+                    // daylight, where there is something for it to be a contrast against, and
+                    // stops it taking over a frame that has no highlights left.
+                    Split(shadows: new Color(0.45f, 0.48f, 0.56f), highlights: new Color(0.60f, 0.55f, 0.47f), balance: 0f);
                     Balance(temperature: 5f, tint: 0f);
                     Glow(intensity: 0.40f, warmth: 0.06f);
                     Ambient(1.12f);
