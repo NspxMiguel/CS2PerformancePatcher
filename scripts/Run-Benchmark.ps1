@@ -134,10 +134,21 @@ if ($ModPreset) {
     }
 
     $text = Get-Content $modSettings -Raw
-    $updated = $text -replace '("Preset"\s*:\s*")[^"]*(")', "`${1}$ModPreset`${2}"
-    if ($updated -eq $text -and $text -notmatch "`"Preset`"\s*:\s*`"$ModPreset`"") {
-        throw "Could not find a Preset field to set in Cs2Saver.coc."
+
+    if ($text -match '"Preset"\s*:\s*"[^"]*"') {
+        $updated = $text -replace '("Preset"\s*:\s*")[^"]*(")', "`${1}$ModPreset`${2}"
     }
+    else {
+        # The game drops any setting that equals its default when it writes these files, and
+        # Off is the mod's default -- so after one Off run the key is simply not there any
+        # more. Put it back rather than failing on its absence.
+        $updated = $text -replace '(\{\s*\r?\n)', "`${1}    `"Preset`": `"$ModPreset`",`r`n"
+    }
+
+    if ($updated -notmatch "`"Preset`"\s*:\s*`"$ModPreset`"") {
+        throw "Could not set Preset to '$ModPreset' in Cs2Saver.coc. Its shape has changed."
+    }
+
     Set-Content -Path $modSettings -Value $updated -Encoding utf8 -NoNewline
     Write-Host "  mod preset '$ModPreset'"
 }
