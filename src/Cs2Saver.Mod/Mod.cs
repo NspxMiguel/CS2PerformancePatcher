@@ -55,7 +55,7 @@ namespace Cs2Saver
                 updateSystem.UpdateAfter<PrefabLodFloorSystem, ObjectInitializeSystem>(
                     SystemUpdatePhase.PrefabUpdate);
                 PrefabFloor = updateSystem.World.GetOrCreateSystemManaged<PrefabLodFloorSystem>();
-                PrefabFloor.Floor = 0;
+                PrefabFloor.Budget = RenderBudget.Off;
             });
 
             TryRegister("frame log", () =>
@@ -99,6 +99,11 @@ namespace Cs2Saver
             try
             {
                 if (BudgetSystem != null) BudgetSystem.Budget = RenderBudget.Off;
+
+                // Now that the original value of every prefab is remembered, setting the budget
+                // to Off actually puts the city back rather than leaving it cut until restart.
+                if (PrefabFloor != null) PrefabFloor.Budget = RenderBudget.Off;
+
                 if (FrameLog != null) FrameLog.Recording = false;
             }
             catch (Exception ex)

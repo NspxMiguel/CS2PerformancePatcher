@@ -26,14 +26,15 @@ namespace Cs2Saver
 
                 {
                     m_Settings.GetOptionLabelLocaleID(nameof(Settings.Preset)),
-                    "Stop drawing people and traffic sooner"
+                    "Stop drawing the clutter sooner"
                 },
                 {
                     m_Settings.GetOptionDescLocaleID(nameof(Settings.Preset)),
-                    "Pedestrians and vehicles are removed from the frame at a shorter distance " +
-                    "than the game would use. Buildings, roads and terrain are untouched, so the " +
-                    "city itself stays exactly as sharp as it was. Each step roughly halves the " +
-                    "distance at which people disappear."
+                    "Trees, street furniture, traffic and crowds are removed from the frame at a " +
+                    "shorter distance than the game would use. Each step roughly halves that " +
+                    "distance. Buildings are never affected by any of these settings, which is " +
+                    "what separates this from turning the game's own detail slider down: the " +
+                    "skyline keeps every triangle it started with."
                 },
 
                 {
@@ -51,6 +52,18 @@ namespace Cs2Saver
                 {
                     m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.Aggressive),
                     "Aggressive — anything that moves is drawn only near the camera"
+                },
+                {
+                    m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.Declutter),
+                    "Declutter — everything except the buildings is pulled in hard"
+                },
+                {
+                    m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.TreesOnly),
+                    "Trees only — foliage fades earlier, nothing else changes"
+                },
+                {
+                    m_Settings.GetEnumValueLocaleID(Settings.BudgetPreset.PropsOnly),
+                    "Street clutter only — signs, lamps and fences fade earlier"
                 },
 
                 {

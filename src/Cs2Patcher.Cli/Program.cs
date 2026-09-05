@@ -340,6 +340,31 @@ int Bench()
         }
     }
 
+    if (args.Contains("--spikes"))
+    {
+        Console.WriteLine();
+        Console.WriteLine("  Where the lows come from (the slowest 1% of frames, taken apart)");
+        Console.WriteLine("  A setting can only fix a spike the GPU row explains.");
+
+        foreach (var run in runs)
+        {
+            var s = SpikeReport.From(run);
+            if (s is null) continue;
+
+            Console.WriteLine();
+            Console.WriteLine($"  {run.Label}  ({s.SlowFrames} of {s.TotalFrames} frames over {s.SlowThresholdMs:N1}ms)");
+
+            foreach (var series in new[] { s.Effective, s.Gpu, s.CpuGame, s.CpuRender })
+                Console.WriteLine($"    {series.Name,-12}{series.TypicalMs,7:N1} ->{series.SlowMs,7:N1} ms   {series.Ratio,5:N1}x");
+
+            Console.WriteLine($"    CPU was the wall in {s.CpuBlamed} of {s.SlowFrames}"
+                              + $"; {s.Bursts} burst{(s.Bursts == 1 ? "" : "s")}, longest {s.LongestBurst}"
+                              + $"; {string.Join(", ", s.ByPhase.Select(p => $"{p.Key} {p.Value}"))}");
+            Console.WriteLine($"    -> {s.Culprit.Name} inflates most ({s.Culprit.Ratio:N1}x)"
+                              + (s.IsBursty ? ", and they arrive in clumps" : ", scattered"));
+        }
+    }
+
     Console.WriteLine();
     var best = runs.MaxBy(r => r.Effective.Low1PctFps)!;
     Console.WriteLine($"Best 1% low: '{best.Label}' at {best.Effective.Low1PctFps:N1} fps"
@@ -437,7 +462,7 @@ int Help()
     Console.WriteLine("  cs2patch bench [path]        Compare benchmark runs (default: .research/bench)");
     Console.WriteLine("  cs2patch tune-pc             Report what outside the game is costing you frames");
     Console.WriteLine();
-    Console.WriteLine("Experimental — the code mod, which is not runtime tested");
+    Console.WriteLine("The code mod — it loads and runs, but has not yet been shown to pay for itself");
     Console.WriteLine("  cs2patch install-mod         Install the Cs2Saver mod into the local mods folder");
     Console.WriteLine("  cs2patch uninstall-mod       Remove it again");
     Console.WriteLine();
@@ -445,6 +470,8 @@ int Help()
     Console.WriteLine("  --path <dir>                 Point at the game install explicitly");
     Console.WriteLine("  --dll <file>                 Use a specific Cs2Saver.dll build");
     Console.WriteLine("  --set Type.property=value    Push one setting past the profile (repeatable)");
+    Console.WriteLine("  --phases                     bench: split each run into paused / speed 1 / speed 3");
+    Console.WriteLine("  --spikes                     bench: take the slowest 1% of frames apart");
     return 0;
 }
 

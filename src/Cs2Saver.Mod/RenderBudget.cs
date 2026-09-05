@@ -5,25 +5,44 @@ namespace Cs2Saver
     /// <summary>
     /// How aggressively each category of thing stops being drawn.
     ///
-    /// The game stores a per-entity <c>CullingInfo.m_MinLod</c> byte and keeps an entity only
-    /// while <c>CalculateMaxLod(bounds, camera) &gt;= m_MinLod</c>. The LOD value it compares
-    /// against falls as distance grows, so a HIGHER floor culls SOONER.
+    /// The game stores a per-entity <c>CullingInfo.m_MinLod</c> and keeps an entity only while
+    /// <c>CalculateMaxLod(bounds, camera) &gt;= m_MinLod</c>. The LOD value it compares against
+    /// falls as distance grows, so a HIGHER floor culls SOONER.
     ///
     /// The scale is logarithmic, and <c>RenderingUtils.CalculateDistanceFactor</c> pins it down
     /// exactly:
     /// <code>
     ///     distanceFactor(lod) = pow(2, (128 - lod) / 6)
     /// </code>
-    /// so <b>every +6 on the floor halves the distance at which something disappears</b>, and
-    /// +12 quarters it. That is the whole model; the numbers below are just choices along it.
+    /// so <b>every +6 on the floor halves the distance at which something disappears</b>. Every
+    /// number here is therefore expressed as a count of halvings rather than a raw LOD value:
+    /// it is the only unit in which these settings mean anything.
+    ///
+    /// <para><b>Why this exists at all.</b> The game's own <c>levelOfDetail</c> slider does the
+    /// same job far more bluntly. Measured on this project's <c>sharp</c> profile, taking it to
+    /// its floor was worth 12ms of a 32.5ms GPU frame — geometry is roughly sixty percent of the
+    /// cost of a sharp city. But that slider scales every LOD transition at once, buildings
+    /// included, which is exactly what makes a city look like modelling clay. This structure
+    /// exists to buy the same geometry back from trees, props and traffic while
+    /// <b>never touching a building</b>. That restriction is the entire point of the mod, and it
+    /// is enforced by prefab category rather than by hoping the numbers stay small.</para>
     /// </summary>
     public struct RenderBudget
     {
-        /// <summary>Floor applied to pedestrians and animals. 0 leaves the game's own value alone.</summary>
-        public byte Citizens;
+        /// <summary>Halvings applied to pedestrians and animals. 0 leaves the game's own value alone.</summary>
+        public byte CitizenHalvings;
 
-        /// <summary>Floor applied to vehicles.</summary>
-        public byte Vehicles;
+        /// <summary>Halvings applied to vehicles.</summary>
+        public byte VehicleHalvings;
+
+        /// <summary>Halvings applied to trees and plants.</summary>
+        public byte TreeHalvings;
+
+        /// <summary>
+        /// Halvings applied to props: street furniture, signs, fences, the small static clutter
+        /// that a city is full of. Buildings are excluded from this category by construction.
+        /// </summary>
+        public byte PropHalvings;
 
         /// <summary>
         /// What the game already assigns, so the presets below can be expressed as offsets from
@@ -38,7 +57,7 @@ namespace Cs2Saver
         ///     house     10 x 8 x 10      ->  109
         ///     tower     30 x 60 x 30     ->   97
         /// </code>
-        /// This matters more than it looks: the job only ever raises the floor, so any preset
+        /// This matters more than it looks: the entity pass only ever raises the floor, so any
         /// value below these does precisely nothing. An earlier version of this file used
         /// 96/112/128 for citizens and was therefore a complete no-op.
         /// </summary>
@@ -47,8 +66,20 @@ namespace Cs2Saver
         /// <inheritdoc cref="CitizenSeed"/>
         public const byte VehicleSeed = 120;
 
+        /// <summary>One halving is +6 on the LOD floor. There is no other magic number here.</summary>
+        public const int PerHalving = 6;
+
+        /// <summary>Absolute floor for the live-entity pass, derived from the seed above.</summary>
+        public byte Citizens => Floor(CitizenSeed, CitizenHalvings);
+
+        /// <inheritdoc cref="Citizens"/>
+        public byte Vehicles => Floor(VehicleSeed, VehicleHalvings);
+
+        private static byte Floor(byte seed, byte halvings) =>
+            halvings == 0 ? (byte)0 : (byte)math.min(255, seed + PerHalving * halvings);
+
         /// <summary>Off. Every category keeps whatever the game decided.</summary>
-        public static RenderBudget Off => new RenderBudget { Citizens = 0, Vehicles = 0 };
+        public static RenderBudget Off => default;
 
         /// <summary>
         /// Citizens disappear at half their usual distance; vehicles are untouched, because on a
@@ -56,30 +87,51 @@ namespace Cs2Saver
         /// </summary>
         public static RenderBudget Balanced => new RenderBudget
         {
-            Citizens = CitizenSeed + 6, // half distance
-            Vehicles = 0,
+            CitizenHalvings = 1,
+            PropHalvings = 1,
         };
 
         /// <summary>
-        /// Citizens at a quarter of their usual distance, vehicles at half.
-        /// The "I want the city, not the people" setting.
+        /// The "I want the city, not the people" setting. Traffic stays legible for longer than
+        /// the crowds do.
         /// </summary>
         public static RenderBudget TrafficFocus => new RenderBudget
         {
-            Citizens = CitizenSeed + 12, // quarter distance
-            Vehicles = VehicleSeed + 6,  // half distance
+            CitizenHalvings = 2,
+            VehicleHalvings = 1,
+            PropHalvings = 1,
         };
 
-        /// <summary>Citizens at an eighth of their usual distance, vehicles at a quarter.</summary>
+        /// <summary>Everything that moves, cut hard. Scenery left alone.</summary>
         public static RenderBudget Aggressive => new RenderBudget
         {
-            Citizens = CitizenSeed + 18, // eighth distance
-            Vehicles = VehicleSeed + 12, // quarter distance
+            CitizenHalvings = 3,
+            VehicleHalvings = 2,
+            PropHalvings = 2,
         };
 
         /// <summary>
+        /// The one this mod exists for: everything that is not a building, cut hard. Trees,
+        /// street furniture, traffic and crowds all give up distance so that the buildings do
+        /// not have to.
+        /// </summary>
+        public static RenderBudget Declutter => new RenderBudget
+        {
+            CitizenHalvings = 3,
+            VehicleHalvings = 2,
+            TreeHalvings = 3,
+            PropHalvings = 4,
+        };
+
+        /// <summary>Trees and plants alone. Exists to measure what foliage actually costs.</summary>
+        public static RenderBudget TreesOnly => new RenderBudget { TreeHalvings = 3 };
+
+        /// <summary>Static clutter alone. Exists to measure what props actually cost.</summary>
+        public static RenderBudget PropsOnly => new RenderBudget { PropHalvings = 4 };
+
+        /// <summary>
         /// Turns a floor into the roughly equivalent distance multiplier relative to another
-        /// floor, purely so a UI can say "about half as far" instead of showing a raw byte.
+        /// floor, purely so a UI can say "about half as far" instead of showing a raw number.
         /// </summary>
         public static float DistanceRatio(byte from, byte to) => math.pow(2f, (from - to) / 6f);
     }

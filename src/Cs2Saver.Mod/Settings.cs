@@ -28,11 +28,20 @@ namespace Cs2Saver
             Balanced,
             TrafficFocus,
             Aggressive,
+
+            /// <summary>Everything that is not a building, cut hard. The one this mod is for.</summary>
+            Declutter,
+
+            /// <summary>Foliage only. Here because it is also how foliage gets measured.</summary>
+            TreesOnly,
+
+            /// <summary>Street clutter only. Here because it is also how clutter gets measured.</summary>
+            PropsOnly,
         }
 
         /// <summary>
-        /// How early pedestrians and vehicles stop being drawn. Each step up roughly halves
-        /// the distance at which they disappear.
+        /// How early each category of thing stops being drawn. Each step up roughly halves the
+        /// distance at which it disappears. Buildings are never affected by any of these.
         /// </summary>
         [SettingsUISection(MainSection, RenderingGroup)]
         public BudgetPreset Preset { get; set; } = BudgetPreset.Off;
@@ -63,14 +72,19 @@ namespace Cs2Saver
                 BudgetPreset.Balanced => RenderBudget.Balanced,
                 BudgetPreset.TrafficFocus => RenderBudget.TrafficFocus,
                 BudgetPreset.Aggressive => RenderBudget.Aggressive,
+                BudgetPreset.Declutter => RenderBudget.Declutter,
+                BudgetPreset.TreesOnly => RenderBudget.TreesOnly,
+                BudgetPreset.PropsOnly => RenderBudget.PropsOnly,
                 _ => RenderBudget.Off,
             };
 
             if (Mod.BudgetSystem != null) Mod.BudgetSystem.Budget = budget;
 
-            // The prefab floor is the durable half: it survives the game re-seeding an
-            // entity's culling data from its prefab, which the entity pass alone would not.
-            if (Mod.PrefabFloor != null) Mod.PrefabFloor.Floor = budget.Citizens;
+            // The prefab pass is the durable half: it survives the game re-seeding an entity's
+            // culling data from its prefab, which the entity pass alone would not. It is also
+            // the only one of the two that can reach trees and props, which have no live
+            // per-frame equivalent worth sweeping.
+            if (Mod.PrefabFloor != null) Mod.PrefabFloor.Budget = budget;
 
             if (Mod.FrameLog != null)
             {
