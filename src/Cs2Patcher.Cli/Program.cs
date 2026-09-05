@@ -427,12 +427,13 @@ int Bench()
     Console.WriteLine("  1% low is the mean of the slowest 1% of frames, not the 99th percentile.");
     Console.WriteLine();
 
-    Console.WriteLine($"  {"run",-26}{"frames",7}{"avg fps",9}{"1% low",8}{"0.1% low",10}{"gpu ms",8}{"render ms",10}{"gpu-bound",10}");
+    Console.WriteLine($"  {"run",-26}{"frames",7}{"avg fps",9}{"1% low",8}{"0.1% low",10}{"gpu ms",8}{"render ms",10}{"gpu-bound",10}{"worst",8}{">50ms",7}");
     foreach (var run in runs)
     {
         var e = run.Effective;
         Console.WriteLine($"  {Truncate(run.Label, 25),-26}{e.Frames,7}{e.AvgFps,9:N1}{e.Low1PctFps,8:N1}"
-                          + $"{e.Low01PctFps,10:N1}{run.GpuOnly.AvgMs,8:N1}{run.CpuRender.AvgMs,10:N1}{run.GpuBoundPercent,9:N0}%");
+                          + $"{e.Low01PctFps,10:N1}{run.GpuOnly.AvgMs,8:N1}{run.CpuRender.AvgMs,10:N1}{run.GpuBoundPercent,9:N0}%"
+                          + $"{run.WorstMs,7:N0}ms{run.StallsOver(50),7}");
     }
 
     if (runs.Count > 1)

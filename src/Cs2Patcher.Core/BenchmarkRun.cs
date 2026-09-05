@@ -132,6 +132,23 @@ public sealed class BenchmarkRun
         return 100.0 * met / frameTimesMs.Count;
     }
 
+    /// <summary>
+    /// The single worst frame in the run, in milliseconds.
+    ///
+    /// Every other statistic here is an aggregate, and aggregates hide the thing people actually
+    /// complain about. "It stutters when I zoom in" is one frame in four thousand taking a third
+    /// of a second, and it does not move a 1% low enough to notice.
+    /// </summary>
+    public double WorstMs => EffectiveMs.Count == 0 ? 0 : EffectiveMs.Max();
+
+    /// <summary>How many frames took longer than a threshold. A stall count, not a rate.</summary>
+    public int StallsOver(double ms)
+    {
+        var count = 0;
+        foreach (var frame in EffectiveMs) if (frame > ms) count++;
+        return count;
+    }
+
     public FrameStats Effective => FrameStats.From(EffectiveMs);
     public FrameStats GpuOnly => FrameStats.From(GpuMs);
     public FrameStats CpuTotal => FrameStats.From(CpuMs);

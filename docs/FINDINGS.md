@@ -684,3 +684,41 @@ intent, not a result: `super-potato` exists for it and has never run on one.
 The 60 fps goal is met at normal play speed and while paused, and is not met at 3x simulation
 speed, where the ceiling is the simulation itself. The 1% low is 33.5 at play speed against a
 target of 60, and closing that gap is a simulation problem rather than a rendering one.
+
+## The stutter when the camera moves, and what actually fixes it
+
+The complaint was "it still stutters when I zoom in and it renders", and for a long time this
+project had no instrument that could see it. The benchmark's aggregate columns cannot: one frame
+in four thousand taking a third of a second does not move a 1% low enough to notice.
+
+The mod now logs stalls where they happen, with the camera's height and how far it moved. Run
+against the benchmark, which does descend and does make large jumps, the picture is unambiguous:
+
+| | worst frame | frames over 50ms | over 100ms |
+|---|---|---|---|
+| no mod | **305 ms** | 17 | 6 |
+| mod, no material restyle | 134 ms | 7 | 1 |
+| mod, everything on | **98 ms** | 8 | **0** |
+| mod + 4096 MB mesh budget | 112 ms | 6 | 1 |
+
+**The stalls are entirely CPU-game.** The worst frame without the mod is 305 ms of which 296 ms is
+CPU-game and 28 ms is GPU — this is asset streaming and logic on the main thread, not drawing.
+
+**The mod already fixes most of it**, which nobody knew including me: the worst stall falls by
+three times and frames over 100 ms go to zero. The mechanism is not mysterious — the clutter cut
+means there is less to stream in when the camera arrives somewhere new.
+
+Two things it is not:
+
+- **Not the material restyle.** With it off the worst stall was 1158 ms in the log against
+  1021 ms with it on, so the restyle is not the cause. It was the first suspect because it polls
+  for newly loaded materials, which is exactly what a large camera move produces.
+- **Not fixable by the mesh budget.** Doubling it to 4096 MB moved the smaller stalls a little
+  (212 → 175 ms, 117 → 88 ms) and left the big one alone.
+
+What remains is a stall of about one second that appears at the same point of the camera path in
+every run, with or without the mod, and outside the benchmark's measured window. It is the game's
+own, it is deterministic, and nothing this project can set reaches it.
+
+`cs2patch bench` now carries a `worst` and a `>50ms` column, because the tool could not previously
+report the problem its users were describing.
