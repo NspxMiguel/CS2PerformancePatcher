@@ -19,7 +19,7 @@ Antes de qualquer coisa, confira trÃªs coisas e me diga o resultado:
 1. `git ls-files | grep -i '\.research'` tem de vir **vazio**. Essa pasta contÃ©m cÃ³digo
    decompilado da Paradox e um token de sessÃ£o capturado; nada dali pode ser publicado. Se
    aparecer qualquer coisa, pare e me avise.
-2. `git log --oneline | wc -l` deve dar 51 e `git status` deve estar limpo.
+2. `git log --oneline | wc -l` deve dar 53 e `git status` deve estar limpo.
 3. `git ls-files | wc -l` deve dar 46.
 
 Depois:
