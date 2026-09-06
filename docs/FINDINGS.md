@@ -910,3 +910,38 @@ small — and a preset called Off that does not turn things off undoes that argu
 
 It also quietly contaminated measurement: every "mod off" control run in this project before the
 fix had its trees cut.
+
+## The game had no anti-aliasing at all, and nobody had looked
+
+`AntiAliasingQualitySettings` serialises to an empty block in `Settings.coc`, which means every
+field sits at its C# default — and the default for `antiAliasingMethod` is `None`. No profile in
+this project had ever written to that setting. The game was rendering with no anti-aliasing, on
+every tier, for the entire life of the tool.
+
+It was found by taking a 1:1 crop to answer a complaint about stepped edges, and the crop answered
+a different question than the one asked: at `handsome` the image is **soft, not jagged**, because
+DLSS is reconstructing it. Stepping is a problem at the tiers below, where the internal render is
+640x360; up here the artefact is blur.
+
+Turning SMAA on anyway, at its cheapest level, was worth it: window mullions, roof edges and
+columns all come back visibly, and the cost was 0.3 fps. It is now in `handsome`, and it is the
+only tweak in the whole tool that switches something **on** that the game was not already doing.
+
+The lesson is not about anti-aliasing. Every setting this project touches was found by reading the
+game's settings classes and asking what could be turned down. Nothing had ever asked what was
+already off that should not have been.
+
+## The final configuration, verified end to end
+
+| | avg fps | 1% low | at 60 | at 30 |
+|---|---|---|---|---|
+| paused | 62.4 | 29.4 | 62% | 100% |
+| **normal play** | **60.7** | **31.0** | **66%** | **100%** |
+| fast-forward (3x) | 37.3 | 16.2 | 0% | 94% |
+
+`handsome`, with `Cs2Saver` at Declutter, greenery Full, Showroom, Matte, and the shadow reach the
+profile writes itself. Against 26.1 stock: **+133%**, with the sun's shadow, ambient occlusion,
+volumetric fog and anti-aliasing all switched on — none of which any configuration in this project
+had at any frame rate before today.
+
+Fast-forward remains what it has always been: the simulation's ceiling, not the renderer's.

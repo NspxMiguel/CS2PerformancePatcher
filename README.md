@@ -58,7 +58,7 @@ Every bound the patcher enforces was read out of the game's own `[SettingsUISlid
 | `sharp`        | Every screen-space effect. Geometry and textures completely untouched. | 50.2 | 28.4 | 7% |
 | `potato`       | Visible cuts, including blurry textures. For machines with no upscaler. | 56.7 | 31.2 | 48% |
 | `skyline`      | Sharper buildings, at the cost of internal resolution. | 56.7 | 29.7 | 46% |
-| `handsome`     | **The only one with the sun's shadow on. Start here.** | **60.8** | **31.7** | **67%** |
+| `handsome`     | **The only one with the sun's shadow on. Start here.** | **60.7** | **31.0** | **66%** |
 | `super-potato` | Everything, including the internal resolution. Jagged, and fast. | 70.4 | 33.8 | 89% |
 | `mega-potato`  | Below that. Two thirds of the resolution. | 71.2 | 29.9 | 89% |
 | `bone-dry`     | Half the resolution. Nothing below this exists. | 72.1 | 36.7 | 89% |

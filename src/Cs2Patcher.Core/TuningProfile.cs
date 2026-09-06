@@ -158,6 +158,7 @@ public static class Profiles
     private const string Terrain      = "Game.Settings.TerrainQualitySettings";
     private const string Texture      = "Game.Settings.TextureQualitySettings";
     private const string DynamicRes   = "Game.Settings.DynamicResolutionScaleSettings";
+    private const string AntiAliasing = "Game.Settings.AntiAliasingQualitySettings";
 
     /// <summary>
     /// Costs nothing you can see. Every entry here removes work that lands on zero or
@@ -529,6 +530,21 @@ public static class Profiles
             new(Shadows, "shadowCullingThresholdVolume", 8.0, Cost.Cheap,
                 "Same, by volume. Street furniture stops paying into the shadow map."),
 
+            // Turned ON, not off, and this is the only tweak in the whole tool that puts back
+            // something the game was not doing in the first place.
+            //
+            // AntiAliasingQualitySettings serialises to an empty block, which means every field
+            // is at its C# default -- and the default for the method is None. So the game had no
+            // anti-aliasing at all, no profile here had ever touched that setting, and nobody
+            // looked until a 1:1 crop was taken to answer a complaint about stepped edges. The
+            // crop showed something else: at this tier the image is soft rather than jagged,
+            // because DLSS is reconstructing it. SMAA on top still cleans up window mullions,
+            // roof edges and columns visibly, for 0.3 fps.
+            new(AntiAliasing, "antiAliasingMethod", "SMAA", Cost.Cheap,
+                "Anti-aliasing, which the game had switched off entirely. Measured at 0.3 fps."),
+            new(AntiAliasing, "smaaQuality", "Low", Cost.Cheap,
+                "The cheapest SMAA the game offers. The expensive levels were not needed here."),
+
             // Free, and measured as free: 60.7 against 60.8, which is inside the run-to-run
             // spread. It buys aerial depth at distance, which is the one thing a city seen from
             // above has instead of a horizon.
@@ -545,7 +561,7 @@ public static class Profiles
             new(Ssao, "maxPixelRadius", 24, Cost.Cheap, "Contact shading, not a global darkening.",
                 16, 256),
         ],
-        new Measured(60.8, 31.7, 67),
+        new Measured(60.7, 31.0, 66),
 
         // Bounded to a hundred metres by the mod, without which the shadows above cost six frames
         // per second instead of one. Street level is the only place a shadow is looked at.
