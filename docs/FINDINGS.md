@@ -945,3 +945,24 @@ volumetric fog and anti-aliasing all switched on — none of which any configura
 had at any frame rate before today.
 
 Fast-forward remains what it has always been: the simulation's ceiling, not the renderer's.
+
+## The grading now asks the sun what time it is
+
+Halving the shadow tint fixed the distant vista and only half-fixed the dusk. The real problem is
+structural: split toning divides an image into a warm half and a cool half, which flatters a scene
+that has both and ruins one that has neither. At dusk almost every pixel is in shadow, so the
+shadow tint stops being a tint and becomes the colour of the image.
+
+The fix is to fade the separation toward neutral as the sun goes down. The signal is the sun's own
+elevation rather than a clock: `PlanetarySystem` is not in the decompiled set and guessing at a
+private API has cost this project two afternoons already, but the directional light is already
+cached in this system for the shadow work, and a directional light points the way its light
+travels — straight down at noon, along the horizon at dusk. `-transform.forward.y`, clamped so that
+full strength arrives about 25 degrees up.
+
+That also happens to be more correct than a clock would be, because it is right on a map with a
+different latitude or day length.
+
+Measured 60.6 against 60.7, which is inside the spread. In a matched photograph the dusk gets its
+gold back and full daylight is unchanged, which is exactly the intended shape of the thing: at a
+daylight factor of 1 the grading is precisely what the look asked for.

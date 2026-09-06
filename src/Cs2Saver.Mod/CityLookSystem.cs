@@ -79,6 +79,10 @@ namespace Cs2Saver
         private int m_SunSearches;
         private int m_SunCountdown;
 
+        /// <summary>What the active look asked for, before the sun's elevation fades it.</summary>
+        private Color m_SplitShadows = Color.grey;
+        private Color m_SplitHighlights = Color.grey;
+
         private Look m_Look = Look.Off;
         private ShadowReach m_Reach = ShadowReach.Untouched;
         private bool m_Dirty = true;
@@ -117,18 +121,23 @@ namespace Cs2Saver
         {
             if (m_Failed) return;
 
-            // The sun is the one thing here the game can take back on its own, so it is checked
-            // on a timer instead of only when something on this system changes.
-            if (!m_Dirty && m_Reach != ShadowReach.Untouched)
+            // Two things here answer to the sun rather than to this system's own settings: the
+            // shadow, which the game can switch back off on its own, and the split toning, which
+            // has to fade out as the sun goes down. Both are checked on a timer.
+            if (!m_Dirty && m_Volume != null && m_Volume.enabled)
             {
                 if (--m_SunCountdown > 0) return;
                 m_SunCountdown = SunRecheckFrames;
 
-                try { ForceSun(); }
+                try
+                {
+                    if (m_Reach != ShadowReach.Untouched) ForceSun();
+                    if (m_Look != Cs2Saver.Look.Off) Retone();
+                }
                 catch (System.Exception ex)
                 {
                     m_Failed = true;
-                    Mod.Log.Error(ex, "Could not hold the sun's shadow on; leaving it to the game.");
+                    Mod.Log.Error(ex, "Could not keep the look in step with the sun; standing down.");
                 }
 
                 return;
@@ -541,12 +550,62 @@ namespace Cs2Saver
             m_Tonemapping.mode.Override(mode);
         }
 
+        /// <summary>
+        /// Sets the split toning, remembering it so <see cref="Retone"/> can fade it with the sun.
+        /// </summary>
         private void Split(Color shadows, Color highlights, float balance)
         {
+            m_SplitShadows = shadows;
+            m_SplitHighlights = highlights;
+
             m_SplitToning.active = true;
-            m_SplitToning.shadows.Override(shadows);
-            m_SplitToning.highlights.Override(highlights);
             m_SplitToning.balance.Override(balance);
+            Retone();
+        }
+
+        /// <summary>
+        /// Fades the split toning toward neutral as the sun goes down.
+        ///
+        /// <para>Split toning divides an image into a warm half and a cool half, which is a
+        /// flattering thing to do to a scene that has both. At dusk it has neither: almost every
+        /// pixel is in shadow, so the shadow tint stops being a tint and becomes the colour of the
+        /// image. The game's own dusk is a strong orange and this turned it olive — which was
+        /// visible in a matched photograph and invisible in every number.</para>
+        ///
+        /// <para>The signal is the sun's own elevation rather than a clock, because the light is
+        /// what the grading is reacting to and the light is already here: the directional light
+        /// this system caches points straight down at noon and along the horizon at dusk. No new
+        /// dependency, and it is correct on a map with a different latitude or day length, which a
+        /// clock would not be.</para>
+        /// </summary>
+        private void Retone()
+        {
+            if (m_SplitToning == null) return;
+
+            var daylight = Daylight();
+
+            // Lerp toward the mid grey that split toning treats as "no tint". At full sun this is
+            // exactly the colour the look asked for; at dusk it is nothing at all.
+            var neutral = new Color(0.5f, 0.5f, 0.5f, 1f);
+            m_SplitToning.shadows.Override(Color.Lerp(neutral, m_SplitShadows, daylight));
+            m_SplitToning.highlights.Override(Color.Lerp(neutral, m_SplitHighlights, daylight));
+        }
+
+        /// <summary>
+        /// How much of the look's colour separation the current sun can carry, from 0 at the
+        /// horizon to 1 overhead. Returns 1 when there is no sun to ask, so a failure here leaves
+        /// the look exactly as it was rather than washing it out.
+        /// </summary>
+        private float Daylight()
+        {
+            if (!FindSun()) return 1f;
+
+            // A directional light points the way its light travels, so straight down is -1 on Y.
+            var elevation = -m_SunLight.transform.forward.y;
+
+            // Full strength from about 25 degrees up. Below that the sun is grazing and the scene
+            // is mostly shadow, which is the case this whole method exists for.
+            return Mathf.Clamp01(elevation / 0.42f);
         }
 
         private void Balance(float temperature, float tint)
