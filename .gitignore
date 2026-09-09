@@ -10,3 +10,11 @@ obj/
 # OS
 Thumbs.db
 desktop.ini
+
+# Working notes: ours, not documentation for whoever lands in the repository.
+PUBLICAR.md
+PEDIDOS.md
+CONTRATO.md
+IDEIAS.md
+DESIGN.md
+TRABALHO.md
