@@ -251,7 +251,9 @@ public static class Text
 
         return profile.Id switch
         {
-            "free" => "Grátis",
+            // "Grátis" reads as "no charge", which is not what the profile is: it
+            // buys frames that cost nothing on screen. The name has to say that.
+            "free" => "Sem Perder Nada",
             "traffic" => "Trânsito",
             "sharp" => "Cidade Nítida",
             "handsome" => "Bonito",
@@ -259,7 +261,7 @@ public static class Text
             "potato" => "Notebook Velho",
             "super-potato" => "Microondas",
             "mega-potato" => "Se Abriu é Porque Roda",
-            "bone-dry" => "Seco Seco Seco",
+            "bone-dry" => "Tudo no Mínimo",
             _ => profile.Name,
         };
     }
