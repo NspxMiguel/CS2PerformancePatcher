@@ -1,5 +1,15 @@
 # CS2 Performance Patcher
 
+> [!WARNING]
+> **Use it at your own risk.** It edits the game's own configuration and installs
+> a mod that changes what gets drawn. Every file it touches is backed up first and
+> `cs2patch restore` puts them back, but a game update, an anti-cheat or a broken
+> mod can still leave the install in a state you have to repair through Steam.
+> Nothing here is endorsed by Colossal Order or Paradox Interactive.
+>
+> The software comes with no warranty of any kind. The author is not liable for a
+> broken install, a lost save or a game that stops launching.
+
 Point it at your Cities: Skylines II install, pick a profile, click patch. It reaches settings the
 in-game menu does not expose, backs up everything it touches, and undoes itself in one command.
 
