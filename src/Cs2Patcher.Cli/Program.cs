@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Cs2Patcher.Core;
 
-var command = args.Length > 0 ? args[0].ToLowerInvariant() : "status";
+var command = FirstCommand(args);
 var explicitPath = GetOption(args, "--path");
 Text.TrySet(GetOption(args, "--lang"));
 
@@ -634,6 +634,24 @@ int Help()
 
 static bool IsGameRunning() =>
     System.Diagnostics.Process.GetProcessesByName("Cities2").Length > 0;
+
+// The command is the first argument that is not an option. The help text presents
+// --lang and --path as options rather than as things that must follow the command,
+// so `cs2patch --lang en list` has to work; before this it read "--lang" as the
+// command and failed on it.
+static string FirstCommand(string[] argv)
+{
+    var valued = new[] { "--path", "--lang", "--dll", "--set", "--target", "--fps" };
+    for (var i = 0; i < argv.Length; i++)
+    {
+        var a = argv[i];
+        if (string.Equals(a, "--help", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(a, "-h", StringComparison.OrdinalIgnoreCase)) return "--help";
+        if (!a.StartsWith('-')) return a.ToLowerInvariant();
+        if (valued.Contains(a, StringComparer.OrdinalIgnoreCase)) i++;
+    }
+    return "status";
+}
 
 static string? GetOption(string[] argv, string name)
 {
