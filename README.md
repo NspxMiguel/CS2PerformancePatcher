@@ -283,7 +283,7 @@ Not yet done, in rough order of value:
 
 ## Licence
 
-GPL-3.0. See [LICENSE](LICENSE).
+Copyright (C) 2026 NSPX (<https://nspx.dev>). GPL-3.0. See [LICENSE](LICENSE).
 
 The intent behind that choice is worth stating, because it is a common misunderstanding: **no
 open-source licence forbids charging money, and this one does not either.** What it does is
