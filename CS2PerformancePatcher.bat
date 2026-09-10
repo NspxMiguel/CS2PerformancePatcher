@@ -45,6 +45,21 @@ function Read-ExpectedHash([string] $Path) {
     return $match.Value.ToUpperInvariant()
 }
 
+function Get-HttpStatus([string] $Url) {
+    # Returns the status code, or 0 if even this could not reach the server. Used only to
+    # tell one kind of failure from another, never on the path that succeeds.
+    try {
+        $response = Invoke-WebRequest -UseBasicParsing -Uri $Url -Method Head -TimeoutSec 20
+        return [int]$response.StatusCode
+    }
+    catch {
+        if ($_.Exception -is [System.Net.WebException] -and $_.Exception.Response) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        return 0
+    }
+}
+
 function Get-Sha256([string] $Path) {
     $stream = [System.IO.File]::OpenRead($Path)
     try {
@@ -114,7 +129,21 @@ catch {
         $useCache = $true
     }
     else {
-        Fail "Could not download CS2 Performance Patcher. Check your internet connection and try again. Details: $($_.Exception.Message)" 4
+        $detail = $_.Exception.Message
+
+        # Ask again with HEAD before blaming the network, because the most likely failure
+        # here lies about itself. GitHub answers a GET for a release asset that does not
+        # exist by closing the connection part-way, which .NET reports as "The request was
+        # aborted: The connection was closed unexpectedly" -- no status code, no Response
+        # object, and a message that sends people to check a connection that is working
+        # perfectly. The same URL answered with HEAD returns a plain 404.
+        if ((Get-HttpStatus $hashUrl) -eq 404) {
+            Fail ("There is no release to download yet. Your connection is fine -- the " +
+                  "download address exists but has nothing attached to it. Check " +
+                  "$base for a release with CS2PerformancePatcher.zip on it.") 10
+        }
+
+        Fail "Could not download CS2 Performance Patcher. Check your internet connection and try again. Details: $detail" 4
     }
 }
 
