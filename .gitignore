@@ -18,3 +18,6 @@ CONTRATO.md
 IDEIAS.md
 DESIGN.md
 TRABALHO.md
+
+# Release staging: two self-contained runtimes, ~250 MB. Rebuilt by CI on every tag.
+artifacts/

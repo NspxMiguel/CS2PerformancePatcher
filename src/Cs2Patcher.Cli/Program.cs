@@ -331,13 +331,38 @@ int UninstallMod()
 
 // Built next to this executable when the whole solution is published together; otherwise
 // falls back to the source-tree build output so it works from a dev checkout.
+/// <summary>
+/// Where to look for the mod assembly when no --dll was given.
+///
+/// The parent directory is in this list because of the shipped layout, and leaving it out was a
+/// real bug: the release package puts cs2patch.exe in cli\ and Cs2Saver.dll at the package root,
+/// so "beside the executable" missed it and the fallback then climbed four levels looking for a
+/// build tree that does not exist on a player's machine. `install-mod` failed for everyone who
+/// installed from a release rather than from source.
+/// </summary>
 static string DefaultModPath()
 {
-    var beside = Path.Combine(AppContext.BaseDirectory, "Cs2Saver.dll");
-    if (File.Exists(beside)) return beside;
+    const string dll = "Cs2Saver.dll";
+    var here = AppContext.BaseDirectory;
 
-    return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
-        "..", "..", "..", "..", "Cs2Saver.Mod", "bin", "Release", "netstandard2.1", "Cs2Saver.dll"));
+    string[] candidates =
+    [
+        Path.Combine(here, dll),               // built or published side by side
+        Path.Combine(here, "..", dll),         // release layout: cli\cs2patch.exe, ..\Cs2Saver.dll
+        Path.Combine(here, "assets", dll),     // running from a checkout root
+        Path.Combine(here, "..", "..", "..", "..", "Cs2Saver.Mod", "bin", "Release",
+            "netstandard2.1", dll),            // the dev build tree, from bin\Release\net8.0-windows
+    ];
+
+    foreach (var candidate in candidates)
+    {
+        var full = Path.GetFullPath(candidate);
+        if (File.Exists(full)) return full;
+    }
+
+    // Nothing found. Hand back the first candidate so the installer's own "not found" message
+    // names a path a person can act on rather than a four-level relative climb.
+    return Path.GetFullPath(candidates[0]);
 }
 
 int TunePc()

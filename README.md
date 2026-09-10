@@ -119,13 +119,21 @@ buildings included — which is exactly what makes a city look like modelling cl
 to make that distinction, because prefabs carry components saying what they are and **a setting
 cannot say "cut the street furniture but not the buildings."**
 
+**Installing it takes one double-click.** From the
+[latest release](https://github.com/NspxMiguel/CS2PerformancePatcher/releases/latest), download
+`CS2PerformancePatcher.bat` and `Instalar-Mod.bat` into the same folder and run the second one.
+It fetches the same package the main launcher uses, checks it against its published SHA-256, and
+installs the mod — no window to navigate and nothing to type.
+
+Or from a terminal, if you would rather:
+
 ```
 cs2patch install-mod      # copy it into the game's local mods folder
 cs2patch uninstall-mod
 ```
 
-Then enable it in the game's mod list and open its options page. It ships **off**; nothing
-changes until you pick a preset.
+Either way, enable it in the game's mod list afterwards and open its options page. It ships
+**off**; nothing changes until you pick a preset.
 
 **How it works.** Every visibility test in the game reduces to
 `CalculateMaxLod(bounds, camera) >= m_MinLod`. The LOD value falls with distance, so raising the

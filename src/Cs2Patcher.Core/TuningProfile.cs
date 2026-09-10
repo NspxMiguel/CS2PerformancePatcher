@@ -530,20 +530,27 @@ public static class Profiles
             new(Shadows, "shadowCullingThresholdVolume", 8.0, Cost.Cheap,
                 "Same, by volume. Street furniture stops paying into the shadow map."),
 
-            // Turned ON, not off, and this is the only tweak in the whole tool that puts back
-            // something the game was not doing in the first place.
+            // Turned ON, not off, and the only tweak in the whole tool that puts back something
+            // the game was not doing in the first place. AntiAliasingQualitySettings serialises
+            // to an empty block, which means every field sits at its C# default, and the default
+            // for the method is None -- so the game shipped with no anti-aliasing at all and no
+            // profile here had ever looked at that setting.
             //
-            // AntiAliasingQualitySettings serialises to an empty block, which means every field
-            // is at its C# default -- and the default for the method is None. So the game had no
-            // anti-aliasing at all, no profile here had ever touched that setting, and nobody
-            // looked until a 1:1 crop was taken to answer a complaint about stepped edges. The
-            // crop showed something else: at this tier the image is soft rather than jagged,
-            // because DLSS is reconstructing it. SMAA on top still cleans up window mullions,
-            // roof edges and columns visibly, for 0.3 fps.
+            // It does nothing on the machine this was measured on, and that is deliberate rather
+            // than an oversight. The game's own Apply() forces the camera to None whenever DLSS
+            // or FSR2 is active, and this tier turns DLSS on, so on any card with DLSS this pair
+            // is inert. isDlssActive requires DLSS to be detected on the hardware, so on a Steam
+            // Deck, an integrated GPU or an older card it applies for real -- which is exactly
+            // the hardware rendering at a low enough internal resolution for stepped edges to be
+            // a genuine complaint. Inert where it is not needed, live where it is.
+            //
+            // An earlier version of this comment claimed 0.3 fps and visibly cleaner edges here,
+            // on the strength of a 1:1 crop. Both runs had identical anti-aliasing state; the
+            // crop was DLSS reconstructing two runs differently.
             new(AntiAliasing, "antiAliasingMethod", "SMAA", Cost.Cheap,
-                "Anti-aliasing, which the game had switched off entirely. Measured at 0.3 fps."),
+                "Anti-aliasing, which the game ships switched off. Applies only without DLSS."),
             new(AntiAliasing, "smaaQuality", "Low", Cost.Cheap,
-                "The cheapest SMAA the game offers. The expensive levels were not needed here."),
+                "The cheapest SMAA the game offers, for the cards that will actually use it."),
 
             // Free, and measured as free: 60.7 against 60.8, which is inside the run-to-run
             // spread. It buys aerial depth at distance, which is the one thing a city seen from

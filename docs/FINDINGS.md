@@ -911,25 +911,45 @@ small — and a preset called Off that does not turn things off undoes that argu
 It also quietly contaminated measurement: every "mod off" control run in this project before the
 fix had its trees cut.
 
-## The game had no anti-aliasing at all, and nobody had looked
+## The game had no anti-aliasing at all — and turning it on does nothing on this machine
 
 `AntiAliasingQualitySettings` serialises to an empty block in `Settings.coc`, which means every
 field sits at its C# default — and the default for `antiAliasingMethod` is `None`. No profile in
 this project had ever written to that setting. The game was rendering with no anti-aliasing, on
 every tier, for the entire life of the tool.
 
-It was found by taking a 1:1 crop to answer a complaint about stepped edges, and the crop answered
-a different question than the one asked: at `handsome` the image is **soft, not jagged**, because
-DLSS is reconstructing it. Stepping is a problem at the tiers below, where the internal render is
-640x360; up here the artefact is blur.
+**The first write-up of this was wrong and is corrected here.** It claimed SMAA cost 0.3 fps and
+visibly cleaned up window mullions and roof edges, on the strength of a 1:1 crop. Then the game's
+own code turned out to say this:
 
-Turning SMAA on anyway, at its cheapest level, was worth it: window mullions, roof edges and
-columns all come back visibly, and the cost was 0.3 fps. It is now in `handsome`, and it is the
-only tweak in the whole tool that switches something **on** that the game was not already doing.
+```csharp
+if (!SharedSettings.instance.graphics.isDlssActive && !SharedSettings.instance.graphics.isFsr2Active)
+{
+    m_GameCamera.antialiasing = ToAAMode(antiAliasingMethod);
+    m_GameCamera.SMAAQuality = smaaQuality;
+}
+else
+{
+    m_GameCamera.antialiasing = HDAdditionalCameraData.AntialiasingMode.None;
+}
+```
 
-The lesson is not about anti-aliasing. Every setting this project touches was found by reading the
-game's settings classes and asking what could be turned down. Nothing had ever asked what was
-already off that should not have been.
+`handsome` sets `dlssQuality` to MaximumPerformance and this machine has an RTX 3050, so
+`isDlssActive` is true and the camera is forced to `None` regardless of what the setting says. The
+two runs being compared had **identical** anti-aliasing state. The difference in the crop was DLSS
+reconstructing two runs slightly differently, and it was read as an improvement because an
+improvement was being looked for. The 0.3 fps was noise.
+
+The tweak stays in the profile, for a reason that only became clear once the code was read: it is
+inert exactly where it is not needed and live exactly where it is. `isDlssActive` requires DLSS to
+be *detected on the hardware*, so on a Steam Deck, an integrated GPU, or any card without DLSS the
+setting applies for real — and those are the machines rendering at a genuinely low internal
+resolution, where stepped edges are an actual complaint rather than a misread crop.
+
+Two lessons, and the second is the expensive one. Every setting this project touches was found by
+reading the game's settings classes and asking what could be turned *down*; nothing had ever asked
+what was already off and should not have been. And a 1:1 crop is evidence of a difference, not
+evidence of its cause — the cause has to come from the code.
 
 ## The final configuration, verified end to end
 
@@ -941,7 +961,7 @@ already off that should not have been.
 
 `handsome`, with `Cs2Saver` at Declutter, greenery Full, Showroom, Matte, and the shadow reach the
 profile writes itself. Against 26.1 stock: **+133%**, with the sun's shadow, ambient occlusion,
-volumetric fog and anti-aliasing all switched on — none of which any configuration in this project
+volumetric fog all switched on -- none of which any configuration in this project
 had at any frame rate before today.
 
 Fast-forward remains what it has always been: the simulation's ceiling, not the renderer's.
