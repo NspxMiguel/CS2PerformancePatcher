@@ -3,7 +3,7 @@
 > [!WARNING]
 > **Use it at your own risk.** It edits the game's own configuration and installs
 > a mod that changes what gets drawn. Every file it touches is backed up first and
-> `cs2patch restore` puts them back, but a game update, an anti-cheat or a broken
+> `cs2patch revert` puts them back, but a game update, an anti-cheat or a broken
 > mod can still leave the install in a state you have to repair through Steam.
 > Nothing here is endorsed by Colossal Order or Paradox Interactive.
 >
