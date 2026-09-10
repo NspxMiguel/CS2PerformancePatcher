@@ -229,11 +229,56 @@ public static class Text
 
     public static string NotPatchedShort => P("Not patched.", "Sem patch.");
 
+    // The three states the window can report about an existing patch. They were written inline in
+    // English, which meant the one line a Portuguese speaker most needs to understand -- the one
+    // saying their patch is no longer in effect -- was the one line still in English.
+
+    /// <summary>
+    /// The tier's display name for a manifest written earlier, looked up by id rather than taken
+    /// from the manifest's stored name. The stored name is whatever the language was when the
+    /// patch was applied, so reading it back would put "Handsome" in the status line of a window
+    /// whose dropdown says "Bonito". Falls back to the stored name if the id is not one we know,
+    /// which is what happens to a manifest from a future version.
+    /// </summary>
+    public static string ProfileNameById(string id, string storedName) =>
+        Profiles.ById(id) is { } p ? ProfileName(p) : storedName;
+
+    public static string PatchedButGameUpdated(string profile) => P(
+        $"Patched with '{profile}', but the game updated since. Apply again.",
+        $"Com patch do '{profile}', mas o jogo foi atualizado depois. Aplique de novo.");
+
+    public static string PatchedButSettingsChanged(string profile) => P(
+        $"Patched with '{profile}', but settings changed since. Apply again.",
+        $"Com patch do '{profile}', mas as configurações mudaram depois. Aplique de novo.");
+
+    public static string PatchedOn(string profile, DateTimeOffset whenLocal) => P(
+        $"Patched with '{profile}' on {whenLocal:d MMM, HH:mm}.",
+        $"Com patch do '{profile}' desde {whenLocal:dd/MM} às {whenLocal:HH:mm}.");
+
+    /// <summary>
+    /// The measured result for a tier.
+    ///
+    /// <para>It opens with "measured" rather than with the number, and that wording is load-bearing.
+    /// The window shows the reader's own GPU and CPU a few lines above this, so a sentence that
+    /// starts "About 72 fps" reads as a promise about their machine. It is not one: it is one
+    /// result from one computer, and the reader's may be twice as fast or half. The percentage is
+    /// the part that travels; the absolute number barely does.</para>
+    /// </summary>
     public static string ProfileMeasuredLine(Measured m) => P(
-        $"About {m.Fps:N0} fps at normal play speed — +{m.GainPercent}% over untouched, "
+        $"Measured at {m.Fps:N0} fps at normal play speed — +{m.GainPercent}% over untouched, "
         + $"with {m.ShareAtSixty}% of frames at 60 or better.",
-        $"Cerca de {m.Fps:N0} fps na velocidade normal de jogo — +{m.GainPercent}% sobre o "
+        $"Medido em {m.Fps:N0} fps na velocidade normal de jogo — +{m.GainPercent}% sobre o "
         + $"original, com {m.ShareAtSixty}% dos quadros a 60 ou mais.");
+
+    /// <summary>
+    /// Whose machine those numbers came from, said next to them rather than in a footnote.
+    /// The gain is what carries across hardware; the frame rate is a fact about one computer.
+    /// </summary>
+    public static string MeasuredOnMachine(string machine) => P(
+        $"On one machine — {machine} — not yours. Expect the percentage to travel and the "
+        + "frame rate not to.",
+        $"Numa máquina só — {machine} — não na sua. O percentual costuma valer; "
+        + "o número de fps, não.");
 
     public static string ChangeCount(int total, int free, int cheap, int visible) => P(
         $"{total} changes — {free} invisible, {cheap} barely visible, {visible} visible.",

@@ -15,6 +15,14 @@ public sealed class MainForm : Form
     private readonly Label _statusLabel = new();
     private readonly ComboBox _profileBox = new();
     private readonly Label _profileDescription = new();
+
+    /// <summary>
+    /// Whose machine the frame rates came from. Its own label rather than a fourth grey line on
+    /// the description, because the window prints the reader's GPU and CPU a few lines further
+    /// up and the numbers below read as a promise about that hardware unless something says
+    /// plainly that they are not.
+    /// </summary>
+    private readonly Label _measuredCaveat = new();
     private readonly Button _applyButton = new();
     private readonly Button _revertButton = new();
     private readonly Button _tunePcButton = new();
@@ -36,7 +44,36 @@ public sealed class MainForm : Form
         StartPosition = FormStartPosition.CenterScreen;
 
         Controls.Add(BuildLayout());
+        ApplyTextWidth();
         Detect();
+    }
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        ApplyTextWidth();
+    }
+
+    /// <summary>
+    /// Caps how wide the wrapping labels may get, so their text wraps instead of running off the
+    /// right edge of the window.
+    ///
+    /// <para>Every container between these labels and the form auto-sizes, which means a label is
+    /// offered as much width as its longest line wants and never has a reason to wrap. The longest
+    /// profile description had been spilling past the window since the window was written, and the
+    /// sentence naming whose machine the frame rates came from would have done the same.</para>
+    ///
+    /// <para>The number comes from the form's own client area, less the padding of the panels in
+    /// between. Measuring the panel that holds the labels instead would be circular: it sizes
+    /// itself to its content, and during construction it reports zero.</para>
+    /// </summary>
+    private void ApplyTextWidth()
+    {
+        const int surroundingPadding = 60; // root 14x2, group box and inner panel 8x2, plus slack
+        var width = Math.Max(240, ClientSize.Width - surroundingPadding);
+
+        _profileDescription.MaximumSize = new Size(width, 0);
+        _measuredCaveat.MaximumSize = new Size(width, 0);
     }
 
     private Control BuildLayout()
@@ -105,18 +142,35 @@ public sealed class MainForm : Form
         _profileBox.SelectedIndex = 1; // Traffic Sim
         _profileBox.SelectedIndexChanged += (_, _) => UpdateProfileDescription();
 
-        _profileDescription.AutoSize = false;
-        _profileDescription.Height = 52;
-        _profileDescription.Dock = DockStyle.Fill;
+        // AutoSize with a MaximumSize width, rather than a fixed Height and Dock.Fill. Every
+        // container from here to the form auto-sizes, so a docked label is handed as much width
+        // as its longest line asks for and never wraps -- it just runs off the right edge of the
+        // window, which is what the longest profile description had been doing unnoticed. Capping
+        // the width is what makes the text wrap; letting the height grow is what stops the wrap
+        // from cutting the last line off.
+        _profileDescription.AutoSize = true;
         _profileDescription.ForeColor = SystemColors.GrayText;
+
+        // Not GrayText. This is the sentence that stops someone reading "72 fps" as a promise
+        // about the computer whose name is printed above it, and grey is the colour this window
+        // uses for text it does not mind you skipping.
+        _measuredCaveat.AutoSize = true;
+        _measuredCaveat.ForeColor = SystemColors.ControlText;
+        _measuredCaveat.Margin = new Padding(3, 8, 3, 0);
+        _measuredCaveat.Text = Cs2Patcher.Core.Text.MeasuredOnMachine(ProfileAdvisor.ReferenceMachine);
 
         var layout = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, AutoSize = true,
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, AutoSize = true,
             Padding = new Padding(8, 6, 8, 8),
         };
         layout.Controls.Add(_profileBox);
         layout.Controls.Add(_profileDescription);
+        layout.Controls.Add(_measuredCaveat);
+
+        // The width cap itself is set from the form, in ApplyTextWidth. Asking this panel how
+        // wide it is would be circular -- it auto-sizes to whatever its content asks for, which
+        // is the thing being decided -- and during construction it answers zero.
 
         return new GroupBox { Text = Cs2Patcher.Core.Text.GroupProfile, Dock = DockStyle.Top, AutoSize = true, Controls = { layout } };
     }
@@ -234,7 +288,7 @@ public sealed class MainForm : Form
         _log.Font = new Font("Consolas", 8.5F);
         _log.BackColor = SystemColors.Window;
 
-        return new GroupBox { Text = "What changed", Dock = DockStyle.Fill, Controls = { _log } };
+        return new GroupBox { Text = Cs2Patcher.Core.Text.GroupLog, Dock = DockStyle.Fill, Controls = { _log } };
     }
 
     private void BrowseForInstall()
@@ -369,11 +423,11 @@ public sealed class MainForm : Form
         _revertButton.Enabled = true;
 
         if (!string.Equals(manifest.GameVersion, _install.GameVersion, StringComparison.Ordinal))
-            SetStatus($"Patched with '{manifest.ProfileName}', but the game updated since. Apply again.", Color.DarkGoldenrod);
+            SetStatus(Cs2Patcher.Core.Text.PatchedButGameUpdated(Cs2Patcher.Core.Text.ProfileNameById(manifest.ProfileId, manifest.ProfileName)), Color.DarkGoldenrod);
         else if (_engine!.HasDriftedSincePatch())
-            SetStatus($"Patched with '{manifest.ProfileName}', but settings changed since. Apply again.", Color.DarkGoldenrod);
+            SetStatus(Cs2Patcher.Core.Text.PatchedButSettingsChanged(Cs2Patcher.Core.Text.ProfileNameById(manifest.ProfileId, manifest.ProfileName)), Color.DarkGoldenrod);
         else
-            SetStatus($"Patched with '{manifest.ProfileName}' on {manifest.PatchedAtUtc.ToLocalTime():d MMM, HH:mm}.", Color.ForestGreen);
+            SetStatus(Cs2Patcher.Core.Text.PatchedOn(Cs2Patcher.Core.Text.ProfileNameById(manifest.ProfileId, manifest.ProfileName), manifest.PatchedAtUtc.ToLocalTime()), Color.ForestGreen);
     }
 
     private void SetStatus(string text, Color color)
