@@ -312,7 +312,3 @@ outcome the choice was made to prevent.
 Nothing from Cities: Skylines II is in this repository. The patcher transforms the files already
 on your machine and ships none of Paradox's. The decompiled code used to work out what the game
 does lives under `.research/`, which is not tracked, and never will be.
-
-## Support
-
-Free and open source. If it saved you time, pay what it was worth at [nspx.dev/loja](https://www.nspx.dev/loja/) — any amount, no account.
